@@ -6,56 +6,59 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    /* Light theme */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
 
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 47% 14%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 222 30% 18%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 210 40% 93%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 222 47% 6%;
+    --accent: 217 91% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 217 91% 60%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 50%;
 
     --radius: 0.5rem;
 
     /* Custom colors for fintech */
-    --profit: 142 76% 45%;
-    --profit-foreground: 142 76% 90%;
-    --loss: 0 84% 60%;
-    --loss-foreground: 0 84% 90%;
+    --profit: 142 76% 36%;
+    --profit-foreground: 142 76% 95%;
+    --loss: 0 84% 55%;
+    --loss-foreground: 0 84% 95%;
     
-    --chart-1: 217 91% 60%;
-    --chart-2: 142 76% 45%;
-    --chart-3: 45 93% 58%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 0 84% 60%;
+    --chart-1: 217 91% 50%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 45 93% 47%;
+    --chart-4: 280 65% 55%;
+    --chart-5: 0 84% 55%;
+    
+    --allocation-bar: 217 70% 70%;
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 14%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 30% 18%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 50%;
   }
 
   .dark {
@@ -87,6 +90,19 @@
     --input: 222 30% 18%;
     --ring: 217 91% 60%;
     
+    --profit: 142 76% 45%;
+    --profit-foreground: 142 76% 90%;
+    --loss: 0 84% 60%;
+    --loss-foreground: 0 84% 90%;
+    
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 76% 45%;
+    --chart-3: 45 93% 58%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 84% 60%;
+    
+    --allocation-bar: 217 50% 45%;
+
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 91% 60%;
@@ -103,9 +119,28 @@
     @apply border-border;
   }
 
+  html {
+    /* iOS safe areas */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    /* Smooth scrolling with momentum on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    /* Full viewport on iOS */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    /* Smooth transitions for theme changes */
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Prevent zoom on input focus on iOS */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
 
@@ -126,6 +161,10 @@
     background-color: hsl(var(--loss));
   }
 
+  .bg-allocation-bar {
+    background-color: hsl(var(--allocation-bar));
+  }
+
   .animate-pulse-subtle {
     animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -144,6 +183,65 @@
   }
 
   .table-row-hover {
-    @apply transition-colors hover:bg-secondary/50;
+    @apply transition-colors;
+  }
+
+  .table-row-hover:hover {
+    background-color: hsl(var(--secondary) / 0.5);
+  }
+
+  .table-row-hover:active {
+    background-color: hsl(var(--secondary) / 0.7);
+  }
+
+  /* iOS touch targets - minimum 44px */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Safe area utilities */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Smooth scroll container for tables on mobile */
+  .scroll-smooth-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scroll-smooth-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Active states for touch feedback */
+  .touch-feedback {
+    @apply transition-transform active:scale-[0.98];
+  }
+
+  /* Allocation bar animation */
+  .allocation-bar-enter {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Sticky header for tables on mobile */
+@media (max-width: 768px) {
+  .sticky-header th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: hsl(var(--card));
   }
 }

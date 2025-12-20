@@ -75,6 +75,9 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        allocation: {
+          bar: "hsl(var(--allocation-bar))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
