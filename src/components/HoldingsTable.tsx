@@ -96,14 +96,14 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="scroll-smooth-x">
         <table className="w-full">
-          <thead>
+          <thead className="sticky-header">
             <tr className="border-b border-border bg-secondary/30">
               <th className="text-left py-3 px-4">
                 <button
                   onClick={() => handleSort('name')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors touch-target"
                 >
                   Security
                   <SortIcon field="name" />
@@ -112,13 +112,13 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
               <th className="text-left py-3 px-4">
                 <button
                   onClick={() => handleSort('quantity')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors touch-target"
                 >
                   Position
                   <SortIcon field="quantity" />
                 </button>
               </th>
-              <th className="text-left py-3 px-4">
+              <th className="text-left py-3 px-4 hidden sm:table-cell">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Cashflow / Share
                 </span>
@@ -126,7 +126,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
               <th className="text-left py-3 px-4">
                 <button
                   onClick={() => handleSort('value')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors touch-target"
                 >
                   Value / Share
                   <SortIcon field="value" />
@@ -135,7 +135,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
               <th className="text-left py-3 px-4">
                 <button
                   onClick={() => handleSort('pl')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors touch-target"
                 >
                   Net P/L
                   <SortIcon field="pl" />
@@ -144,7 +144,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
               <th className="text-right py-3 px-4">
                 <button
                   onClick={() => handleSort('allocation')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors ml-auto"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors ml-auto touch-target"
                 >
                   Allocation
                   <SortIcon field="allocation" />
@@ -156,34 +156,46 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
             {sortedHoldings.map((holding, index) => (
               <tr 
                 key={holding.symbol}
-                className="border-b border-border/50 table-row-hover animate-fade-in"
+                className="border-b border-border/50 table-row-hover touch-feedback animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                {/* Security */}
+                {/* Security with Allocation Bar */}
                 <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("w-1 h-12 rounded-full", getAccentColor(index))} />
-                    <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={holding.logoUrl}
-                        alt={holding.symbol}
-                        className="w-6 h-6 object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                      <span className="text-xs font-semibold text-muted-foreground hidden">
-                        {holding.symbol.substring(0, 2)}
-                      </span>
-                    </div>
-                    <div>
-                      <button className="font-medium text-primary hover:underline text-left">
-                        {holding.name}
-                      </button>
-                      <p className="text-xs text-muted-foreground">
-                        {holding.assetType === 'stock' ? holding.isin : holding.symbol}
-                      </p>
+                  <div className="flex items-center gap-3 relative">
+                    {/* Allocation Bar Background */}
+                    <div 
+                      className="absolute inset-0 bg-allocation-bar/10 rounded-lg allocation-bar-enter pointer-events-none"
+                      style={{ 
+                        width: `${Math.min(holding.allocationPercent, 100)}%`,
+                        minWidth: holding.allocationPercent > 0 ? '8px' : '0'
+                      }}
+                    />
+                    
+                    {/* Content on top */}
+                    <div className="relative flex items-center gap-3 z-10">
+                      <div className={cn("w-1 h-12 rounded-full flex-shrink-0", getAccentColor(index))} />
+                      <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img
+                          src={holding.logoUrl}
+                          alt={holding.symbol}
+                          className="w-6 h-6 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <span className="text-xs font-semibold text-muted-foreground hidden">
+                          {holding.symbol.substring(0, 2)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <button className="font-medium text-primary hover:underline text-left truncate block max-w-[150px] sm:max-w-none">
+                          {holding.name}
+                        </button>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {holding.assetType === 'stock' ? holding.isin : holding.symbol}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -198,8 +210,8 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                   </div>
                 </td>
 
-                {/* Cashflow per share */}
-                <td className="py-4 px-4">
+                {/* Cashflow per share - hidden on small screens */}
+                <td className="py-4 px-4 hidden sm:table-cell">
                   <div>
                     <p className="font-medium">{formatCurrency(holding.investedAmount)}</p>
                     <p className="text-xs text-muted-foreground">
