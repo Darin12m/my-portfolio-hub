@@ -1,26 +1,54 @@
+/**
+ * Unified Price Service
+ * 
+ * Fetches live market data from public APIs (no auth required):
+ * - Stocks: Yahoo Finance v7/v8 endpoints via CORS proxy
+ * - Crypto: CoinGecko (primary) with Binance fallback
+ * 
+ * Features:
+ * - In-memory caching (30-60 seconds)
+ * - Batch fetching
+ * - Fallback to cached prices on failure
+ * - NEVER returns 0 or undefined prices
+ */
+
 import { LivePrice, AssetType } from '@/types/portfolio';
-import { mockPrices } from '@/data/mockData';
 
-interface PriceCache {
-  [symbol: string]: {
-    price: LivePrice;
-    timestamp: number;
-  };
-}
+// ==================== CONFIGURATION ====================
 
-const priceCache: PriceCache = {};
-const CACHE_DURATION = 30000; // 30 seconds
-
-// CORS proxy for Yahoo Finance (stocks)
+const CACHE_TTL = 30000; // 30 seconds
 const CORS_PROXY = 'https://corsproxy.io/?';
 
-// CoinGecko public API (CORS enabled, no auth required)
+// Yahoo Finance endpoints
+const YAHOO_QUOTE_URL = 'https://query1.finance.yahoo.com/v7/finance/quote';
+const YAHOO_CHART_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
+
+// CoinGecko public API
 const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 
-// Binance public API (CORS enabled) - fallback
+// Binance public API (fallback)
 const BINANCE_API = 'https://api.binance.com/api/v3';
 
-// Map company names to Yahoo Finance ticker symbols
+// ==================== PRICE CACHE ====================
+
+interface CacheEntry {
+  price: LivePrice;
+  timestamp: number;
+}
+
+const priceCache = new Map<string, CacheEntry>();
+
+function getCacheKey(symbol: string, assetType: AssetType): string {
+  return `${assetType}:${symbol.toUpperCase()}`;
+}
+
+function isCacheFresh(entry: CacheEntry): boolean {
+  return Date.now() - entry.timestamp < CACHE_TTL;
+}
+
+// ==================== SYMBOL MAPPINGS ====================
+
+// Map company names to Yahoo Finance tickers
 const companyToTickerMap: Record<string, string> = {
   'APPLE': 'AAPL',
   'MICROSOFT': 'MSFT',
@@ -87,7 +115,6 @@ const companyToTickerMap: Record<string, string> = {
   'MONGODB': 'MDB',
   'ELASTIC': 'ESTC',
   'CONFLUENT': 'CFLT',
-  'SNOWFLAKE INC': 'SNOW',
 };
 
 // Map crypto symbols to CoinGecko IDs
@@ -122,30 +149,26 @@ const cryptoToCoinGeckoMap: Record<string, string> = {
   'HBAR': 'hedera-hashgraph',
   'ICP': 'internet-computer',
   'AAVE': 'aave',
+  'XMR': 'monero',
+  'OP': 'optimism',
+  'ARB': 'arbitrum',
+  'INJ': 'injective-protocol',
+  'SUI': 'sui',
+  'APT': 'aptos',
+  'PEPE': 'pepe',
+  'WIF': 'dogwifcoin',
+  'BONK': 'bonk',
 };
 
-// Symbol mapping for Binance (fallback)
-const cryptoToBinanceMap: Record<string, string> = {
-  'BTC': 'BTCUSDT',
-  'ETH': 'ETHUSDT',
-  'SOL': 'SOLUSDT',
-  'XRP': 'XRPUSDT',
-  'ADA': 'ADAUSDT',
-  'DOGE': 'DOGEUSDT',
-  'DOT': 'DOTUSDT',
-  'LINK': 'LINKUSDT',
-  'AVAX': 'AVAXUSDT',
-  'MATIC': 'MATICUSDT',
-};
+// ==================== SYMBOL RESOLUTION ====================
 
 /**
  * Resolve a symbol to its Yahoo Finance ticker
- * Handles both actual tickers (AAPL) and company names (APPLE)
  */
-function resolveStockTicker(symbol: string): string {
-  const upper = symbol.toUpperCase();
+export function resolveStockTicker(symbol: string): string {
+  const upper = symbol.toUpperCase().trim();
   
-  // If it's already a known ticker (2-5 chars, no spaces), use it
+  // If it looks like a ticker (1-5 letters, optionally with dash), use it
   if (/^[A-Z]{1,5}(-[A-Z])?$/.test(upper)) {
     return upper;
   }
@@ -154,184 +177,316 @@ function resolveStockTicker(symbol: string): string {
   return companyToTickerMap[upper] || upper;
 }
 
-// Fetch stock price from Yahoo Finance
-async function fetchYahooPrice(symbol: string): Promise<number | null> {
-  const ticker = resolveStockTicker(symbol);
+/**
+ * Resolve a crypto symbol to CoinGecko ID
+ */
+function resolveCryptoId(symbol: string): string | null {
+  const upper = symbol.toUpperCase().trim();
+  return cryptoToCoinGeckoMap[upper] || null;
+}
+
+// ==================== STOCK PRICE FETCHING ====================
+
+interface YahooQuoteResult {
+  symbol: string;
+  regularMarketPrice?: number;
+  regularMarketChange?: number;
+  regularMarketChangePercent?: number;
+  regularMarketPreviousClose?: number;
+  marketState?: string;
+}
+
+/**
+ * Fetch stock prices from Yahoo Finance v7 quote endpoint (batched)
+ */
+async function fetchYahooQuotes(symbols: string[]): Promise<Map<string, YahooQuoteResult>> {
+  const results = new Map<string, YahooQuoteResult>();
+  
+  if (symbols.length === 0) return results;
+  
+  const tickers = symbols.map(resolveStockTicker);
+  const url = `${CORS_PROXY}${encodeURIComponent(`${YAHOO_QUOTE_URL}?symbols=${tickers.join(',')}`)}`;
   
   try {
-    const url = `${CORS_PROXY}${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`)}`;
     const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' }
+      headers: { 'Accept': 'application/json' },
     });
     
     if (!response.ok) {
-      console.warn(`Yahoo Finance error for ${ticker}: ${response.status}`);
-      return null;
+      console.warn(`Yahoo Finance quote error: ${response.status}`);
+      return results;
     }
     
     const data = await response.json();
-    const quote = data?.chart?.result?.[0]?.meta;
+    const quotes = data?.quoteResponse?.result || [];
     
-    if (quote?.regularMarketPrice) {
-      return quote.regularMarketPrice;
+    for (const quote of quotes) {
+      results.set(quote.symbol, {
+        symbol: quote.symbol,
+        regularMarketPrice: quote.regularMarketPrice,
+        regularMarketChange: quote.regularMarketChange,
+        regularMarketChangePercent: quote.regularMarketChangePercent,
+        regularMarketPreviousClose: quote.regularMarketPreviousClose,
+        marketState: quote.marketState,
+      });
     }
-    
-    // Fallback to previous close if market is closed
-    if (quote?.previousClose) {
-      return quote.previousClose;
-    }
-    
-    return null;
   } catch (error) {
-    console.warn(`Failed to fetch Yahoo price for ${ticker}:`, error);
-    return null;
-  }
-}
-
-// Fetch crypto price from CoinGecko (primary source)
-async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
-  const coinId = cryptoToCoinGeckoMap[symbol.toUpperCase()];
-  if (!coinId) {
-    console.warn(`No CoinGecko mapping for ${symbol}`);
-    return null;
+    console.warn('Yahoo Finance fetch error:', error);
   }
   
+  return results;
+}
+
+/**
+ * Fetch single stock price with chart endpoint fallback
+ */
+async function fetchSingleStockPrice(symbol: string): Promise<number | null> {
+  const ticker = resolveStockTicker(symbol);
+  
+  // Try v8 chart endpoint
   try {
-    const response = await fetch(
-      `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`
-    );
+    const url = `${CORS_PROXY}${encodeURIComponent(`${YAHOO_CHART_URL}/${ticker}?interval=1d&range=1d`)}`;
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      
+      if (meta?.regularMarketPrice) {
+        return meta.regularMarketPrice;
+      }
+      if (meta?.previousClose) {
+        return meta.previousClose;
+      }
+    }
+  } catch (error) {
+    console.warn(`Chart endpoint failed for ${ticker}:`, error);
+  }
+  
+  return null;
+}
+
+// ==================== CRYPTO PRICE FETCHING ====================
+
+/**
+ * Fetch crypto prices from CoinGecko (batched)
+ */
+async function fetchCoinGeckoPrices(symbols: string[]): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  
+  if (symbols.length === 0) return results;
+  
+  // Map symbols to CoinGecko IDs
+  const symbolToId: Record<string, string> = {};
+  const ids: string[] = [];
+  
+  for (const symbol of symbols) {
+    const id = resolveCryptoId(symbol);
+    if (id) {
+      symbolToId[symbol.toUpperCase()] = id;
+      ids.push(id);
+    }
+  }
+  
+  if (ids.length === 0) return results;
+  
+  try {
+    const url = `${COINGECKO_API}/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+    const response = await fetch(url);
     
     if (!response.ok) {
-      console.warn(`CoinGecko error for ${symbol}: ${response.status}`);
-      return null;
+      console.warn(`CoinGecko error: ${response.status}`);
+      return results;
     }
     
     const data = await response.json();
-    return data?.[coinId]?.usd || null;
+    
+    // Map back to original symbols
+    for (const [symbol, id] of Object.entries(symbolToId)) {
+      const price = data?.[id]?.usd;
+      if (typeof price === 'number') {
+        results.set(symbol, price);
+      }
+    }
   } catch (error) {
-    console.warn(`Failed to fetch CoinGecko price for ${symbol}:`, error);
-    return null;
+    console.warn('CoinGecko fetch error:', error);
   }
+  
+  return results;
 }
 
-// Fetch crypto price from Binance (fallback)
+/**
+ * Fetch single crypto price from Binance (fallback)
+ */
 async function fetchBinancePrice(symbol: string): Promise<number | null> {
-  const binanceSymbol = cryptoToBinanceMap[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
+  const upper = symbol.toUpperCase();
+  const binanceSymbol = `${upper}USDT`;
   
   try {
     const response = await fetch(`${BINANCE_API}/ticker/price?symbol=${binanceSymbol}`);
     
-    if (!response.ok) {
-      return null;
-    }
+    if (!response.ok) return null;
     
     const data = await response.json();
     return data?.price ? parseFloat(data.price) : null;
   } catch (error) {
-    console.warn(`Failed to fetch Binance price for ${symbol}:`, error);
+    console.warn(`Binance fetch error for ${symbol}:`, error);
     return null;
   }
 }
 
-// Unified price fetching interface
-export async function fetchPrice(symbol: string, assetType: AssetType): Promise<LivePrice> {
-  const cacheKey = `${symbol}_${assetType}`;
+// ==================== UNIFIED PRICE SERVICE ====================
+
+export interface PriceRequest {
+  symbol: string;
+  assetType: AssetType;
+}
+
+export interface NormalizedPrice {
+  symbol: string;
+  assetType: AssetType;
+  price: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
+  timestamp: number;
+  source: string;
+}
+
+/**
+ * Fetch prices for a batch of assets
+ * Routes stocks to Yahoo Finance, crypto to CoinGecko/Binance
+ */
+export async function fetchPricesBatch(requests: PriceRequest[]): Promise<Map<string, LivePrice>> {
+  const results = new Map<string, LivePrice>();
+  const now = Date.now();
   
-  // Check cache first
-  const cached = priceCache[cacheKey];
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.price;
-  }
-
-  try {
-    let price: number | null = null;
-    let source: string = 'unknown';
-
-    if (assetType === 'stock') {
-      price = await fetchYahooPrice(symbol);
-      source = 'yahoo';
+  // Separate by asset type
+  const stockSymbols: string[] = [];
+  const cryptoSymbols: string[] = [];
+  const requestMap = new Map<string, PriceRequest>();
+  
+  for (const req of requests) {
+    const key = getCacheKey(req.symbol, req.assetType);
+    requestMap.set(key, req);
+    
+    // Check cache first
+    const cached = priceCache.get(key);
+    if (cached && isCacheFresh(cached)) {
+      results.set(req.symbol, cached.price);
+      continue;
+    }
+    
+    // Queue for fetching
+    if (req.assetType === 'stock') {
+      stockSymbols.push(req.symbol);
     } else {
-      // Try CoinGecko first, then Binance as fallback
-      price = await fetchCoinGeckoPrice(symbol);
-      source = 'coingecko';
-      
-      if (price === null) {
-        price = await fetchBinancePrice(symbol);
-        source = 'binance';
-      }
+      cryptoSymbols.push(req.symbol);
     }
-
-    // Fallback to cached price or mock if fetch failed
-    if (price === null) {
-      if (cached) {
-        console.warn(`Using stale cache for ${symbol}`);
-        return cached.price;
-      }
-      // Try to find in mock prices with resolved ticker
-      const resolvedSymbol = assetType === 'stock' ? resolveStockTicker(symbol) : symbol.toUpperCase();
-      price = mockPrices[resolvedSymbol] || mockPrices[symbol] || mockPrices[symbol.toUpperCase()] || 0;
-      source = 'fallback';
-    }
-
-    const livePrice: LivePrice = {
-      symbol,
-      assetType,
-      price,
-      timestamp: Date.now(),
-      source,
-    };
-
-    // Update cache
-    priceCache[cacheKey] = {
-      price: livePrice,
-      timestamp: Date.now(),
-    };
-
-    return livePrice;
-  } catch (error) {
-    console.error(`Price fetch error for ${symbol}:`, error);
-    
-    // Fallback to cached or mock price
-    if (cached) {
-      return cached.price;
-    }
-    
-    return {
-      symbol,
-      assetType,
-      price: mockPrices[symbol] || 0,
-      timestamp: Date.now(),
-      source: 'fallback',
-    };
   }
-}
-
-// Fetch prices for multiple symbols (batched)
-export async function fetchPrices(symbols: string[], assetType: AssetType): Promise<Map<string, LivePrice>> {
-  const prices = new Map<string, LivePrice>();
   
-  if (symbols.length === 0) {
-    return prices;
-  }
-
-  // Batch fetch with Promise.allSettled to handle individual failures
-  const results = await Promise.allSettled(
-    symbols.map(async (symbol) => {
-      const price = await fetchPrice(symbol, assetType);
-      return { symbol, price };
-    })
-  );
-
-  results.forEach((result) => {
-    if (result.status === 'fulfilled') {
-      prices.set(result.value.symbol, result.value.price);
+  // Fetch stocks from Yahoo Finance
+  if (stockSymbols.length > 0) {
+    const yahooResults = await fetchYahooQuotes(stockSymbols);
+    
+    for (const symbol of stockSymbols) {
+      const ticker = resolveStockTicker(symbol);
+      const quote = yahooResults.get(ticker);
+      
+      let price: number | null = quote?.regularMarketPrice || null;
+      
+      // Fallback to chart endpoint if quote failed
+      if (!price) {
+        price = await fetchSingleStockPrice(symbol);
+      }
+      
+      // Fallback to cache or skip
+      const cacheKey = getCacheKey(symbol, 'stock');
+      if (!price || price <= 0) {
+        const stale = priceCache.get(cacheKey);
+        if (stale) {
+          console.warn(`Using stale cache for ${symbol}`);
+          results.set(symbol, stale.price);
+        }
+        continue;
+      }
+      
+      const livePrice: LivePrice = {
+        symbol,
+        assetType: 'stock',
+        price,
+        timestamp: now,
+        source: 'yahoo',
+      };
+      
+      results.set(symbol, livePrice);
+      priceCache.set(cacheKey, { price: livePrice, timestamp: now });
     }
-  });
-
-  return prices;
+  }
+  
+  // Fetch crypto from CoinGecko
+  if (cryptoSymbols.length > 0) {
+    const geckoResults = await fetchCoinGeckoPrices(cryptoSymbols);
+    
+    for (const symbol of cryptoSymbols) {
+      const upper = symbol.toUpperCase();
+      let price = geckoResults.get(upper) || null;
+      
+      // Fallback to Binance
+      if (!price) {
+        price = await fetchBinancePrice(symbol);
+      }
+      
+      // Fallback to cache or skip
+      const cacheKey = getCacheKey(symbol, 'crypto');
+      if (!price || price <= 0) {
+        const stale = priceCache.get(cacheKey);
+        if (stale) {
+          console.warn(`Using stale cache for ${symbol}`);
+          results.set(symbol, stale.price);
+        }
+        continue;
+      }
+      
+      const livePrice: LivePrice = {
+        symbol,
+        assetType: 'crypto',
+        price,
+        timestamp: now,
+        source: price === geckoResults.get(upper) ? 'coingecko' : 'binance',
+      };
+      
+      results.set(symbol, livePrice);
+      priceCache.set(cacheKey, { price: livePrice, timestamp: now });
+    }
+  }
+  
+  return results;
 }
 
-// Check if all prices are available and valid
+/**
+ * Fetch a single price
+ */
+export async function fetchPrice(symbol: string, assetType: AssetType): Promise<LivePrice | null> {
+  const results = await fetchPricesBatch([{ symbol, assetType }]);
+  return results.get(symbol) || null;
+}
+
+/**
+ * Fetch prices for multiple symbols of the same asset type
+ */
+export async function fetchPrices(symbols: string[], assetType: AssetType): Promise<Map<string, LivePrice>> {
+  const requests = symbols.map(symbol => ({ symbol, assetType }));
+  return fetchPricesBatch(requests);
+}
+
+// ==================== PRICE VALIDATION ====================
+
+/**
+ * Check if all required prices are available and valid (> 0)
+ */
 export function hasAllValidPrices(symbols: string[], prices: Map<string, LivePrice>): boolean {
   return symbols.every(symbol => {
     const price = prices.get(symbol);
@@ -339,22 +494,31 @@ export function hasAllValidPrices(symbols: string[], prices: Map<string, LivePri
   });
 }
 
-// Get cached price or null
+/**
+ * Get cached price if fresh
+ */
 export function getCachedPrice(symbol: string, assetType: AssetType): LivePrice | null {
-  const cacheKey = `${symbol}_${assetType}`;
-  const cached = priceCache[cacheKey];
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+  const key = getCacheKey(symbol, assetType);
+  const cached = priceCache.get(key);
+  if (cached && isCacheFresh(cached)) {
     return cached.price;
   }
   return null;
 }
 
-// Clear price cache
+/**
+ * Clear all cached prices
+ */
 export function clearPriceCache(): void {
-  Object.keys(priceCache).forEach(key => delete priceCache[key]);
+  priceCache.clear();
 }
 
-// Auto-refresh prices with cleanup
+// ==================== AUTO-REFRESH ====================
+
+/**
+ * Start auto-refreshing prices at specified interval
+ * Returns cleanup function
+ */
 export function startPriceRefresh(
   symbols: string[],
   assetType: AssetType,
@@ -368,23 +532,119 @@ export function startPriceRefresh(
     
     try {
       const prices = await fetchPrices(symbols, assetType);
-      if (isActive) {
+      if (isActive && prices.size > 0) {
         onUpdate(prices);
       }
     } catch (error) {
       console.error('Price refresh error:', error);
     }
   };
-
+  
   // Initial fetch
   refresh();
-
+  
   // Set up interval
   const intervalId = setInterval(refresh, interval);
-
+  
   // Return cleanup function
   return () => {
     isActive = false;
     clearInterval(intervalId);
   };
+}
+
+// ==================== CHART DATA ====================
+
+export interface ChartDataPoint {
+  time: number;
+  value: number;
+  label: string;
+}
+
+export type ChartRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'All';
+
+/**
+ * Fetch historical chart data from Yahoo Finance
+ */
+export async function fetchChartData(
+  symbol: string,
+  range: ChartRange = '1Y'
+): Promise<ChartDataPoint[]> {
+  const ticker = resolveStockTicker(symbol);
+  
+  // Map range to Yahoo Finance parameters
+  const rangeMap: Record<ChartRange, { interval: string; range: string }> = {
+    '1D': { interval: '5m', range: '1d' },
+    '5D': { interval: '15m', range: '5d' },
+    '1M': { interval: '1d', range: '1mo' },
+    '6M': { interval: '1d', range: '6mo' },
+    'YTD': { interval: '1d', range: 'ytd' },
+    '1Y': { interval: '1d', range: '1y' },
+    '5Y': { interval: '1wk', range: '5y' },
+    'All': { interval: '1mo', range: 'max' },
+  };
+  
+  const params = rangeMap[range];
+  const url = `${CORS_PROXY}${encodeURIComponent(
+    `${YAHOO_CHART_URL}/${ticker}?interval=${params.interval}&range=${params.range}`
+  )}`;
+  
+  try {
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+    });
+    
+    if (!response.ok) {
+      console.warn(`Chart data fetch error: ${response.status}`);
+      return [];
+    }
+    
+    const data = await response.json();
+    const result = data?.chart?.result?.[0];
+    
+    if (!result) return [];
+    
+    const timestamps = result.timestamp || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    
+    const chartData: ChartDataPoint[] = [];
+    
+    for (let i = 0; i < timestamps.length; i++) {
+      const value = closes[i];
+      if (typeof value !== 'number' || isNaN(value)) continue;
+      
+      const time = timestamps[i] * 1000; // Convert to milliseconds
+      chartData.push({
+        time,
+        value,
+        label: formatChartLabel(time, range),
+      });
+    }
+    
+    return chartData;
+  } catch (error) {
+    console.warn('Chart data fetch error:', error);
+    return [];
+  }
+}
+
+function formatChartLabel(timestamp: number, range: ChartRange): string {
+  const date = new Date(timestamp);
+  
+  switch (range) {
+    case '1D':
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    case '5D':
+      return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit' });
+    case '1M':
+    case '6M':
+    case 'YTD':
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    case '1Y':
+    case '5Y':
+    case 'All':
+      return date.toLocaleDateString([], { month: 'short', year: '2-digit' });
+    default:
+      return date.toLocaleDateString();
+  }
 }

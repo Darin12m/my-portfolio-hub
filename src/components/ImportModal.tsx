@@ -40,18 +40,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
     ibkr: {
       name: 'Interactive Brokers',
       description: 'Import your trades from IBKR Flex Query CSV export. This will REPLACE all existing IBKR trades.',
-      parser: (content: string) => {
-        const result = parseIBKRCSV(content);
-        return {
-          ...result,
-          stats: {
-            totalRows: result.trades.length + result.errors.length,
-            tradesFound: result.trades.length,
-            rowsSkipped: result.errors.length,
-            skipReasons: {},
-          },
-        };
-      },
+      parser: (content: string) => parseIBKRCSV(content),
     },
   };
 
@@ -95,7 +84,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
       setParseResult({
         trades: [],
         errors: ['Failed to read file'],
-        stats: { totalRows: 0, tradesFound: 0, rowsSkipped: 0, skipReasons: {} },
+        diagnostics: { totalRows: 0, tradesImported: 0, rowsSkipped: 0, skipReasons: {}, warnings: [] },
       });
       setStep('preview');
     } finally {
@@ -190,23 +179,23 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total rows:</span>
-                  <span className="font-medium">{parseResult.stats.totalRows}</span>
+                  <span className="font-medium">{parseResult.diagnostics.totalRows}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Trades found:</span>
-                  <span className="font-semibold text-primary">{parseResult.stats.tradesFound}</span>
+                  <span className="font-semibold text-primary">{parseResult.diagnostics.tradesImported}</span>
                 </div>
               </div>
 
-              {parseResult.stats.rowsSkipped > 0 && (
+              {parseResult.diagnostics.rowsSkipped > 0 && (
                 <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
                   <Info className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <div className="text-xs text-muted-foreground">
-                    <span className="font-medium">{parseResult.stats.rowsSkipped} rows skipped</span>
-                    {Object.keys(parseResult.stats.skipReasons).length > 0 && (
+                    <span className="font-medium">{parseResult.diagnostics.rowsSkipped} rows skipped</span>
+                    {Object.keys(parseResult.diagnostics.skipReasons).length > 0 && (
                       <ul className="mt-1 space-y-0.5">
-                        {Object.entries(parseResult.stats.skipReasons).slice(0, 5).map(([reason, count]) => (
-                          <li key={reason}>• {reason}: {count}</li>
+                        {Object.entries(parseResult.diagnostics.skipReasons).slice(0, 5).map(([reason, count]) => (
+                          <li key={reason}>• {reason}: {count as number}</li>
                         ))}
                       </ul>
                     )}
