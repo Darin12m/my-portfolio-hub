@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AssetToggle } from '@/components/AssetToggle';
 import { HoldingsTable } from '@/components/HoldingsTable';
 import { PortfolioSummary } from '@/components/PortfolioSummary';
-import { PortfolioChart } from '@/components/PortfolioChart';
+import { TradingChart } from '@/components/TradingChart';
 import { ImportSettingsSheet } from '@/components/ImportSettingsSheet';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
@@ -166,18 +166,18 @@ export default function Holdings() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 safe-area-bottom">
         <div className="space-y-6">
-          {/* Portfolio Chart */}
-          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
-            <PortfolioChart holdings={holdings} />
-            {lastUpdate && (
-              <div className="flex items-center justify-center gap-1.5 mt-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
-                <span className="text-xs text-muted-foreground">
-                  Live · {lastUpdate.toLocaleTimeString()}
-                </span>
-              </div>
-            )}
-          </div>
+          {/* Trading Chart */}
+          <TradingChart holdings={holdings} />
+          
+          {/* Live Indicator */}
+          {lastUpdate && (
+            <div className="flex items-center justify-center gap-1.5 -mt-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-chart-profit animate-pulse" />
+              <span className="text-xs text-muted-foreground">
+                Live · {lastUpdate.toLocaleTimeString()}
+              </span>
+            </div>
+          )}
 
           {/* Portfolio Summary */}
           <PortfolioSummary holdings={holdings} />
