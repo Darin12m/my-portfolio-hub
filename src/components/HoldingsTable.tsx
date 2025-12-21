@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Pencil, Trash2, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { AssetLogo } from '@/components/AssetLogo';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -336,20 +337,12 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                 )}
                 
                 {/* Logo */}
-                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  <img
-                    src={holding.logoUrl}
-                    alt={holding.symbol}
-                    className="w-5 h-5 object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                  <span className="text-[10px] font-bold text-muted-foreground hidden">
-                    {holding.symbol.substring(0, 2)}
-                  </span>
-                </div>
+                <AssetLogo
+                  symbol={holding.symbol}
+                  name={holding.name}
+                  assetType={holding.assetType}
+                  size="md"
+                />
                 
                 {/* Name & ISIN */}
                 <div className="min-w-0 flex-1">
