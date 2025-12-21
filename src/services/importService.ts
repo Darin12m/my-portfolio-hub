@@ -1,7 +1,25 @@
 import { Trade, ImportResult } from '@/types/portfolio';
 
-// Valid Trading212 trade actions - only actual market trades
-const VALID_T212_ACTIONS = ['market buy', 'market sell'];
+// Valid Trading212 trade actions (case-insensitive)
+// Supports both old format ("Market buy"/"Market sell") and new format ("Buy"/"Sell")
+const VALID_T212_BUY_ACTIONS = ['buy', 'market buy'];
+const VALID_T212_SELL_ACTIONS = ['sell', 'market sell'];
+const VALID_T212_ACTIONS = [...VALID_T212_BUY_ACTIONS, ...VALID_T212_SELL_ACTIONS];
+
+/**
+ * Check if action is a valid trade action (case-insensitive)
+ */
+function isValidTradeAction(action: string): boolean {
+  return VALID_T212_ACTIONS.includes(action.toLowerCase().trim());
+}
+
+/**
+ * Determine trade side from action (case-insensitive)
+ */
+function getTradeSide(action: string): 'buy' | 'sell' {
+  const normalizedAction = action.toLowerCase().trim();
+  return VALID_T212_BUY_ACTIONS.includes(normalizedAction) ? 'buy' : 'sell';
+}
 
 // Parse Trading212 CSV export - imports RAW trades only
 export function parseTrading212CSV(csvContent: string): { trades: Trade[]; errors: string[] } {
@@ -27,10 +45,10 @@ export function parseTrading212CSV(csvContent: string): { trades: Trade[]; error
         const values = parseCSVLine(line);
         const row = Object.fromEntries(headers.map((h, idx) => [h, values[idx] || '']));
 
-        const action = (row['action'] || '').toLowerCase().trim();
+        const action = (row['action'] || '').trim();
         
-        // Only import Market buy and Market sell - skip all other actions
-        if (!VALID_T212_ACTIONS.includes(action)) {
+        // Only import Buy/Sell actions - skip all other actions (deposits, dividends, etc.)
+        if (!isValidTradeAction(action)) {
           skippedNonTrades++;
           continue;
         }
@@ -50,7 +68,7 @@ export function parseTrading212CSV(csvContent: string): { trades: Trade[]; error
           id: `t212_${Date.now()}_${i}`,
           symbol,
           assetType: 'stock',
-          side: action === 'market buy' ? 'buy' : 'sell',
+          side: getTradeSide(action),
           quantity, // Full precision preserved
           price,    // Full precision preserved
           fee,
