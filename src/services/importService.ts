@@ -1,6 +1,9 @@
 import { Trade, ImportResult } from '@/types/portfolio';
 
-// Parse Trading212 CSV export
+// Valid Trading212 trade actions - only actual market trades
+const VALID_T212_ACTIONS = ['market buy', 'market sell'];
+
+// Parse Trading212 CSV export - imports RAW trades only
 export function parseTrading212CSV(csvContent: string): { trades: Trade[]; errors: string[] } {
   const trades: Trade[] = [];
   const errors: string[] = [];
@@ -14,6 +17,8 @@ export function parseTrading212CSV(csvContent: string): { trades: Trade[]; error
       return { trades, errors };
     }
 
+    let skippedNonTrades = 0;
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
@@ -22,24 +27,45 @@ export function parseTrading212CSV(csvContent: string): { trades: Trade[]; error
         const values = parseCSVLine(line);
         const row = Object.fromEntries(headers.map((h, idx) => [h, values[idx] || '']));
 
+        const action = (row['action'] || '').toLowerCase().trim();
+        
+        // Only import Market buy and Market sell - skip all other actions
+        if (!VALID_T212_ACTIONS.includes(action)) {
+          skippedNonTrades++;
+          continue;
+        }
+
+        const symbol = row['ticker'] || row['symbol'] || '';
+        // Preserve full precision - no rounding
+        const quantity = Number(row['no. of shares'] || row['quantity'] || '0');
+        const price = Number(row['price / share'] || row['price'] || '0');
+        const fee = Number(row['currency conversion fee'] || row['fee'] || '0');
+
+        if (!symbol || quantity <= 0 || price <= 0) {
+          errors.push(`Line ${i + 1}: Invalid trade data (symbol: ${symbol}, qty: ${quantity}, price: ${price})`);
+          continue;
+        }
+
         const trade: Trade = {
           id: `t212_${Date.now()}_${i}`,
-          symbol: row['ticker'] || row['symbol'] || '',
+          symbol,
           assetType: 'stock',
-          side: (row['action'] || '').toLowerCase().includes('buy') ? 'buy' : 'sell',
-          quantity: parseFloat(row['no. of shares'] || row['quantity'] || '0'),
-          price: parseFloat(row['price / share'] || row['price'] || '0'),
-          fee: parseFloat(row['currency conversion fee'] || row['fee'] || '0'),
+          side: action === 'market buy' ? 'buy' : 'sell',
+          quantity, // Full precision preserved
+          price,    // Full precision preserved
+          fee,
           date: new Date(row['time'] || row['date'] || Date.now()),
           source: 'trading212',
         };
 
-        if (trade.symbol && trade.quantity > 0 && trade.price > 0) {
-          trades.push(trade);
-        }
+        trades.push(trade);
       } catch (e) {
         errors.push(`Line ${i + 1}: Failed to parse`);
       }
+    }
+
+    if (skippedNonTrades > 0) {
+      errors.push(`Skipped ${skippedNonTrades} non-trade rows (deposits, dividends, etc.)`);
     }
   } catch (e) {
     errors.push('Failed to parse CSV file');
