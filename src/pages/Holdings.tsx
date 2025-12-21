@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { AssetType, Trade, LivePrice } from '@/types/portfolio';
 import { mockPrices } from '@/data/mockData';
-import { calculateHoldings } from '@/lib/calculations';
+import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
 import { fetchTrades, addTrades, deleteTradesBySymbol } from '@/services/firestoreService';
@@ -110,10 +110,15 @@ export default function Holdings() {
     };
   }, [symbols, assetType, handlePriceUpdate]);
 
-  // Calculate holdings
+  // Calculate global portfolio total from ALL trades (not filtered by asset type)
+  const globalPortfolioTotal = useMemo(() => {
+    return calculateGlobalPortfolioTotal(trades, prices);
+  }, [trades, prices]);
+
+  // Calculate holdings with global total for allocation
   const holdings = useMemo(() => {
-    return calculateHoldings(trades, prices, assetType);
-  }, [trades, prices, assetType]);
+    return calculateHoldings(trades, prices, assetType, globalPortfolioTotal);
+  }, [trades, prices, assetType, globalPortfolioTotal]);
 
   // Handle trade imports
   const handleImport = async (newTrades: Trade[]) => {
