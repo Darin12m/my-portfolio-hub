@@ -9,9 +9,106 @@
  * - Robust action recognition (buy/sell)
  * - Full precision quantity/price preservation
  * - Detailed import diagnostics
+ * - Automatic symbol normalization to tickers
  */
 
 import { Trade, TradeSource, AssetType } from '@/types/portfolio';
+
+// ==================== SYMBOL NORMALIZATION ====================
+
+// Map company names to Yahoo Finance tickers
+const companyToTickerMap: Record<string, string> = {
+  'APPLE': 'AAPL',
+  'MICROSOFT': 'MSFT',
+  'AMAZON': 'AMZN',
+  'ALPHABET (CLASS A)': 'GOOGL',
+  'ALPHABET (CLASS C)': 'GOOG',
+  'ALPHABET': 'GOOGL',
+  'META PLATFORMS': 'META',
+  'TESLA': 'TSLA',
+  'NVIDIA': 'NVDA',
+  'BROADCOM': 'AVGO',
+  'PALANTIR': 'PLTR',
+  'PALANTIR TECHNOLOGIES': 'PLTR',
+  'SNOWFLAKE': 'SNOW',
+  'SOFI TECHNOLOGIES': 'SOFI',
+  'SOFI': 'SOFI',
+  'ROBINHOOD MARKETS': 'HOOD',
+  'ROBINHOOD': 'HOOD',
+  'NETFLIX': 'NFLX',
+  'AMD': 'AMD',
+  'ADVANCED MICRO DEVICES': 'AMD',
+  'INTEL': 'INTC',
+  'DISNEY': 'DIS',
+  'WALT DISNEY': 'DIS',
+  'VISA': 'V',
+  'MASTERCARD': 'MA',
+  'JPMORGAN': 'JPM',
+  'JPMORGAN CHASE': 'JPM',
+  'BANK OF AMERICA': 'BAC',
+  'GOLDMAN SACHS': 'GS',
+  'BERKSHIRE HATHAWAY': 'BRK-B',
+  'JOHNSON & JOHNSON': 'JNJ',
+  'UNITEDHEALTH': 'UNH',
+  'WALMART': 'WMT',
+  'HOME DEPOT': 'HD',
+  'COSTCO': 'COST',
+  'SALESFORCE': 'CRM',
+  'ADOBE': 'ADBE',
+  'ORACLE': 'ORCL',
+  'CISCO': 'CSCO',
+  'PAYPAL': 'PYPL',
+  'SPOTIFY': 'SPOT',
+  'UBER': 'UBER',
+  'AIRBNB': 'ABNB',
+  'COINBASE': 'COIN',
+  'SHOPIFY': 'SHOP',
+  'SQUARE': 'SQ',
+  'BLOCK': 'SQ',
+  'ZOOM': 'ZM',
+  'ZOOM VIDEO': 'ZM',
+  'DOCUSIGN': 'DOCU',
+  'CROWDSTRIKE': 'CRWD',
+  'DATADOG': 'DDOG',
+  'TWILIO': 'TWLO',
+  'OKTA': 'OKTA',
+  'ATLASSIAN': 'TEAM',
+  'SERVICENOW': 'NOW',
+  'WORKDAY': 'WDAY',
+  'SPLUNK': 'SPLK',
+  'PALO ALTO NETWORKS': 'PANW',
+  'FORTINET': 'FTNT',
+  'ZSCALER': 'ZS',
+  'CLOUDFLARE': 'NET',
+  'MONGODB': 'MDB',
+  'ELASTIC': 'ESTC',
+  'CONFLUENT': 'CFLT',
+  'GOOGLE': 'GOOGL',
+  'FACEBOOK': 'META',
+  'APPLE INC': 'AAPL',
+  'TESLA INC': 'TSLA',
+  'NVIDIA CORPORATION': 'NVDA',
+  'MICROSOFT CORPORATION': 'MSFT',
+  'AMAZON.COM': 'AMZN',
+  'AMAZON.COM INC': 'AMZN',
+};
+
+/**
+ * Normalize a symbol to its proper ticker
+ * Converts company names like "APPLE" to "AAPL"
+ */
+export function normalizeToTicker(symbol: string): string {
+  const upper = symbol.toUpperCase().trim();
+  
+  // If it's already a valid ticker (1-5 letters, optionally with dash), return it
+  if (/^[A-Z]{1,5}(-[A-Z])?$/.test(upper)) {
+    // But still check if it's a company name that matches
+    return companyToTickerMap[upper] || upper;
+  }
+  
+  // Look up in company name map
+  return companyToTickerMap[upper] || upper;
+}
 
 // ==================== COLUMN ALIASES ====================
 
@@ -477,17 +574,20 @@ export function parseFlexibleCSV(
         }
 
         // Get symbol - priority: ticker > instrument > isin
-        const ticker = columns.ticker !== null ? cleanSymbol(values[columns.ticker]) : '';
-        const instrument = columns.instrument !== null ? cleanSymbol(values[columns.instrument]) : '';
+        const rawTicker = columns.ticker !== null ? cleanSymbol(values[columns.ticker]) : '';
+        const rawInstrument = columns.instrument !== null ? cleanSymbol(values[columns.instrument]) : '';
         const isin = columns.isin !== null ? values[columns.isin]?.trim().toUpperCase() : undefined;
 
-        // Use first available symbol
-        const symbol = ticker || instrument || isin || '';
-
-        if (!symbol) {
+        // Use first available symbol and normalize to ticker
+        const rawSymbol = rawTicker || rawInstrument || isin || '';
+        
+        if (!rawSymbol) {
           addSkipReason('Missing symbol');
           continue;
         }
+        
+        // Normalize to proper ticker (APPLE -> AAPL, TESLA -> TSLA)
+        const symbol = normalizeToTicker(rawSymbol);
 
         // Get quantity (absolute value)
         const rawQuantity = columns.quantity !== null ? parseNumber(values[columns.quantity]) : null;

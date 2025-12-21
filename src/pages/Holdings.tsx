@@ -12,7 +12,7 @@ import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
-import { fetchTrades, addTrades, deleteTradesBySymbol, deleteTradesBySource } from '@/services/localDbService';
+import { fetchTrades, addTrades, deleteTradesBySymbol, deleteTradesBySource, migrateSymbolsToTickers } from '@/services/localDbService';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -28,10 +28,16 @@ export default function Holdings() {
   const { toast } = useToast();
   const refreshCleanupRef = useRef<(() => void) | null>(null);
 
-  // Load trades from IndexedDB on mount
+  // Load trades from IndexedDB on mount (with migration)
   useEffect(() => {
     const loadTrades = async () => {
       try {
+        // First, migrate any existing trades with company names to tickers
+        const migrationResult = await migrateSymbolsToTickers();
+        if (migrationResult.migrated > 0) {
+          console.log(`Migrated ${migrationResult.migrated} trades to proper ticker symbols`);
+        }
+        
         const localTrades = await fetchTrades();
         setTrades(localTrades);
         console.log('Loaded trades from IndexedDB:', localTrades.length);
