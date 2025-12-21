@@ -8,23 +8,46 @@ import { ImportSettingsSheet } from '@/components/ImportSettingsSheet';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { AssetType, Trade, LivePrice } from '@/types/portfolio';
-import { mockTrades, mockPrices } from '@/data/mockData';
+import { mockPrices } from '@/data/mockData';
 import { calculateHoldings } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
+import { fetchTrades, addTrades, deleteTradesBySymbol } from '@/services/firestoreService';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 export default function Holdings() {
   const [assetType, setAssetType] = useState<AssetType>('stock');
-  const [trades, setTrades] = useState<Trade[]>(mockTrades);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [prices, setPrices] = useState<Map<string, LivePrice>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [binanceConnected, setBinanceConnected] = useState(false);
   const [gateioConnected, setGateioConnected] = useState(false);
+  const [dbLoading, setDbLoading] = useState(true);
   const { toast } = useToast();
   const refreshCleanupRef = useRef<(() => void) | null>(null);
+
+  // Load trades from Firestore on mount
+  useEffect(() => {
+    const loadTrades = async () => {
+      try {
+        const firestoreTrades = await fetchTrades();
+        setTrades(firestoreTrades);
+        console.log('Loaded trades from Firestore:', firestoreTrades.length);
+      } catch (error) {
+        console.error('Error loading trades from Firestore:', error);
+        toast({
+          title: "Database connection",
+          description: "Could not load trades. Check Firestore rules.",
+          variant: "destructive",
+        });
+      } finally {
+        setDbLoading(false);
+      }
+    };
+    loadTrades();
+  }, [toast]);
 
   // Get symbols for current asset type
   const symbols = useMemo(() => {
@@ -93,21 +116,41 @@ export default function Holdings() {
   }, [trades, prices, assetType]);
 
   // Handle trade imports
-  const handleImport = (newTrades: Trade[]) => {
-    setTrades(prev => [...prev, ...newTrades]);
-    toast({
-      title: "Trades imported",
-      description: `${newTrades.length} trades have been added to your portfolio.`,
-    });
+  const handleImport = async (newTrades: Trade[]) => {
+    try {
+      await addTrades(newTrades);
+      setTrades(prev => [...prev, ...newTrades]);
+      toast({
+        title: "Trades imported",
+        description: `${newTrades.length} trades saved to database.`,
+      });
+    } catch (error) {
+      console.error('Error saving trades:', error);
+      toast({
+        title: "Save failed",
+        description: "Could not save trades to database. Check Firestore rules.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle delete holdings
-  const handleDeleteHoldings = (symbols: string[]) => {
-    setTrades(prev => prev.filter(t => !symbols.includes(t.symbol)));
-    toast({
-      title: "Holdings deleted",
-      description: `${symbols.length} holding(s) removed from your portfolio.`,
-    });
+  const handleDeleteHoldings = async (symbols: string[]) => {
+    try {
+      await Promise.all(symbols.map(symbol => deleteTradesBySymbol(symbol)));
+      setTrades(prev => prev.filter(t => !symbols.includes(t.symbol)));
+      toast({
+        title: "Holdings deleted",
+        description: `${symbols.length} holding(s) removed from database.`,
+      });
+    } catch (error) {
+      console.error('Error deleting holdings:', error);
+      toast({
+        title: "Delete failed",
+        description: "Could not delete holdings from database.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle exchange connections
