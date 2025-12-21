@@ -311,9 +311,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
           >
             {/* Security Cell */}
             <div className="py-2.5 px-3 relative overflow-hidden border-r border-border/40">
-              {/* Allocation Bar - behind content with gradient fade */}
+              {/* Allocation Bar - behind content, solid fill */}
               <div 
-                className="absolute inset-0 pointer-events-none overflow-hidden"
+                className="absolute inset-y-1 left-0 right-0 pointer-events-none overflow-hidden"
                 aria-hidden="true"
               >
                 <div 

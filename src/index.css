@@ -262,25 +262,13 @@
     @apply transition-transform active:scale-[0.99];
   }
 
-  /* Allocation bar with gradient fade - soft blue like reference */
+  /* Allocation bar - solid fill, visible but subtle */
   .allocation-bar {
-    background: linear-gradient(
-      90deg,
-      rgba(59, 130, 246, 0.12) 0%,
-      rgba(59, 130, 246, 0.18) 40%,
-      rgba(59, 130, 246, 0.10) 70%,
-      transparent 100%
-    );
+    background-color: rgba(59, 130, 246, 0.18);
   }
   
   .dark .allocation-bar {
-    background: linear-gradient(
-      90deg,
-      rgba(59, 130, 246, 0.15) 0%,
-      rgba(59, 130, 246, 0.22) 40%,
-      rgba(59, 130, 246, 0.10) 70%,
-      transparent 100%
-    );
+    background-color: rgba(59, 130, 246, 0.25);
   }
   
   /* Trading chart container - always dark */
