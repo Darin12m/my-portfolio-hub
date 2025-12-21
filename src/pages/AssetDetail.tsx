@@ -1,12 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
-import { mockTrades, mockPrices } from '@/data/mockData';
+import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, formatCurrency, formatPercent, formatQuantity } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
-import { LivePrice } from '@/types/portfolio';
+import { LivePrice, Trade } from '@/types/portfolio';
+import { fetchTrades } from '@/services/localDbService';
 
 type TimeRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'All';
 
@@ -98,6 +99,12 @@ export default function AssetDetail() {
   const { symbol } = useParams<{ symbol: string }>();
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<TimeRange>('1D');
+  const [trades, setTrades] = useState<Trade[]>([]);
+
+  // Load trades from IndexedDB
+  useEffect(() => {
+    fetchTrades().then(setTrades).catch(console.error);
+  }, []);
 
   const currentPrice = symbol ? mockPrices[symbol] || 0 : 0;
   
@@ -116,11 +123,11 @@ export default function AssetDetail() {
   }, []);
 
   const holding = useMemo(() => {
-    if (!symbol) return null;
+    if (!symbol || trades.length === 0) return null;
     const assetType = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'AVAX'].includes(symbol) ? 'crypto' : 'stock';
-    const holdings = calculateHoldings(mockTrades, prices, assetType);
+    const holdings = calculateHoldings(trades, prices, assetType);
     return holdings.find(h => h.symbol === symbol) || null;
-  }, [symbol, prices]);
+  }, [symbol, prices, trades]);
 
   const chartData = useMemo(() => {
     return generateChartData(currentPrice, timeRange);

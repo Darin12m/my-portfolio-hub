@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Upload, Link2, Unlink } from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -10,12 +10,12 @@ import {
 } from '@/components/ui/sheet';
 import { ImportModal } from './ImportModal';
 import { ExchangeConnection } from './ExchangeConnection';
-import { Trade, AssetType } from '@/types/portfolio';
+import { Trade, AssetType, TradeSource } from '@/types/portfolio';
 
 interface ImportSettingsSheetProps {
   assetType: AssetType;
   trades: Trade[];
-  onImport: (trades: Trade[]) => void;
+  onImport: (trades: Trade[], source?: TradeSource) => void;
   binanceConnected: boolean;
   gateioConnected: boolean;
   onBinanceConnect: (apiKey: string, apiSecret: string) => Promise<boolean>;
@@ -57,8 +57,8 @@ export function ImportSettingsSheet({
               <ImportModal
                 source="trading212"
                 existingTrades={trades}
-                onImport={(newTrades) => {
-                  onImport(newTrades);
+                onImport={(newTrades, source) => {
+                  onImport(newTrades, source);
                   setOpen(false);
                 }}
                 fullWidth
@@ -66,8 +66,8 @@ export function ImportSettingsSheet({
               <ImportModal
                 source="ibkr"
                 existingTrades={trades}
-                onImport={(newTrades) => {
-                  onImport(newTrades);
+                onImport={(newTrades, source) => {
+                  onImport(newTrades, source);
                   setOpen(false);
                 }}
                 fullWidth

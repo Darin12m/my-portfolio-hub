@@ -1,6 +1,6 @@
-// Logo service with automatic fetching and caching
+// Logo service with automatic fetching and caching for stocks and crypto
 
-// Stock domain mappings for Clearbit logo API
+// Stock domain mappings for logo APIs
 const stockDomains: Record<string, string> = {
   AAPL: 'apple.com',
   MSFT: 'microsoft.com',
@@ -144,6 +144,71 @@ const stockDomains: Record<string, string> = {
   U: 'unity.com',
   RIVN: 'rivian.com',
   LCID: 'lucidmotors.com',
+  // Trading212 common stocks (UK/EU)
+  'LLOY': 'lloydsbankinggroup.com',
+  'BP': 'bp.com',
+  'HSBA': 'hsbc.com',
+  'VOD': 'vodafone.com',
+  'GSK': 'gsk.com',
+  'AZN': 'astrazeneca.com',
+  'BARC': 'barclays.com',
+  'RIO': 'riotinto.com',
+  'SHEL': 'shell.com',
+  'ULVR': 'unilever.com',
+  'DGE': 'diageo.com',
+  'REL': 'relx.com',
+  'NG': 'nationalgrid.com',
+  'BT': 'bt.com',
+  'IAG': 'iairgroup.com',
+  'RR': 'rolls-royce.com',
+  'LSEG': 'lseg.com',
+  'EXPN': 'experian.com',
+  'CPG': 'compass-group.com',
+  'PRU': 'prudential.com',
+  'AAL': 'anglo-american.com',
+  'NWG': 'natwestgroup.com',
+  'ANTO': 'antofagasta.co.uk',
+  'STAN': 'sc.com',
+  'GLEN': 'glencore.com',
+  'SSE': 'sse.com',
+  'CRH': 'crh.com',
+  'ABF': 'abf.co.uk',
+  'SBRY': 'about.sainsburys.co.uk',
+  'WPP': 'wpp.com',
+  'BHP': 'bhp.com',
+  'IMB': 'imb.com',
+  'BA.': 'bae.com',
+  'RKT': 'reckitt.com',
+  'TSCO': 'tesco.com',
+  'SMDS': 'smds.com',
+  'SMT': 'scottishmortgageit.com',
+  'III': '3i.com',
+  // European stocks
+  'SAP': 'sap.com',
+  'ASML': 'asml.com',
+  'LVMH': 'lvmh.com',
+  'OR': 'loreal.com',
+  'SIE': 'siemens.com',
+  'ALV': 'allianz.com',
+  'TTE': 'totalenergies.com',
+  'AIR': 'airbus.com',
+  'BNP': 'bnpparibas.com',
+  'SAN': 'santander.com',
+  'EL': 'elkem.com',
+  'DTE': 'telekom.com',
+  'VOW3': 'volkswagen.com',
+  'BMW': 'bmw.com',
+  'DAI': 'mercedes-benz.com',
+  'BAS': 'basf.com',
+  'MBG': 'mercedes-benz.com',
+  'ADS': 'adidas.com',
+  'MUV2': 'munichre.com',
+  'DBK': 'db.com',
+  'BAYN': 'bayer.com',
+  'IFX': 'infineon.com',
+  'HEN3': 'henkel.com',
+  'MRK.DE': 'merckgroup.com',
+  // Add more as needed
 };
 
 // Crypto logo mappings using CoinGecko CDN
@@ -216,56 +281,62 @@ const logoCache = new Map<string, string | null>();
 const failedLogos = new Set<string>();
 
 /**
- * Get logo URL for a stock symbol
+ * Normalize symbol - handle Trading212 ticker formats
+ */
+function normalizeSymbol(symbol: string): string {
+  // Remove any exchange suffix (e.g., "AAPL_US" -> "AAPL")
+  let normalized = symbol.split('_')[0];
+  // Remove trailing dots (UK stocks like "BP." -> "BP")
+  normalized = normalized.replace(/\.$/, '');
+  return normalized.toUpperCase();
+}
+
+/**
+ * Get logo URL for a stock symbol using multiple fallback sources
  */
 export function getStockLogoUrl(symbol: string): string | null {
-  const upperSymbol = symbol.toUpperCase();
+  const normalizedSymbol = normalizeSymbol(symbol);
+  const cacheKey = `stock_${normalizedSymbol}`;
   
   // Check cache first
-  if (logoCache.has(`stock_${upperSymbol}`)) {
-    return logoCache.get(`stock_${upperSymbol}`) || null;
+  if (logoCache.has(cacheKey)) {
+    return logoCache.get(cacheKey) || null;
   }
   
   // Check if we have a domain mapping
-  const domain = stockDomains[upperSymbol];
+  const domain = stockDomains[normalizedSymbol];
   if (domain) {
     const url = `https://logo.clearbit.com/${domain}`;
-    logoCache.set(`stock_${upperSymbol}`, url);
+    logoCache.set(cacheKey, url);
     return url;
   }
   
-  // Try common patterns
-  const commonPatterns = [
-    `${upperSymbol.toLowerCase()}.com`,
-    `${upperSymbol.toLowerCase()}corp.com`,
-    `${upperSymbol.toLowerCase()}inc.com`,
-  ];
-  
-  // Use first pattern as fallback
-  const fallbackUrl = `https://logo.clearbit.com/${commonPatterns[0]}`;
-  logoCache.set(`stock_${upperSymbol}`, fallbackUrl);
-  return fallbackUrl;
+  // Fallback: Try logo.dev API with symbol (works for many stocks)
+  const logoDevUrl = `https://img.logo.dev/${normalizedSymbol.toLowerCase()}.com?token=pk_VAZ6PwmyR5icAH0FwGlvYw&size=64`;
+  logoCache.set(cacheKey, logoDevUrl);
+  return logoDevUrl;
 }
 
 /**
  * Get logo URL for a crypto symbol
  */
 export function getCryptoLogoUrl(symbol: string): string | null {
-  const upperSymbol = symbol.toUpperCase();
+  const normalizedSymbol = normalizeSymbol(symbol);
+  const cacheKey = `crypto_${normalizedSymbol}`;
   
   // Check cache first
-  if (logoCache.has(`crypto_${upperSymbol}`)) {
-    return logoCache.get(`crypto_${upperSymbol}`) || null;
+  if (logoCache.has(cacheKey)) {
+    return logoCache.get(cacheKey) || null;
   }
   
   // Check if we have a direct mapping
-  if (cryptoLogos[upperSymbol]) {
-    logoCache.set(`crypto_${upperSymbol}`, cryptoLogos[upperSymbol]);
-    return cryptoLogos[upperSymbol];
+  if (cryptoLogos[normalizedSymbol]) {
+    logoCache.set(cacheKey, cryptoLogos[normalizedSymbol]);
+    return cryptoLogos[normalizedSymbol];
   }
   
   // No logo found
-  logoCache.set(`crypto_${upperSymbol}`, null);
+  logoCache.set(cacheKey, null);
   return null;
 }
 
@@ -283,14 +354,14 @@ export function getAssetLogoUrl(symbol: string, assetType: 'stock' | 'crypto'): 
  * Mark a logo as failed to prevent retrying
  */
 export function markLogoFailed(symbol: string): void {
-  failedLogos.add(symbol.toUpperCase());
+  failedLogos.add(normalizeSymbol(symbol));
 }
 
 /**
  * Check if a logo has failed before
  */
 export function hasLogoFailed(symbol: string): boolean {
-  return failedLogos.has(symbol.toUpperCase());
+  return failedLogos.has(normalizeSymbol(symbol));
 }
 
 /**
