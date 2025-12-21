@@ -19,9 +19,10 @@ interface ImportModalProps {
   source: ImportSource;
   existingTrades: Trade[];
   onImport: (trades: Trade[]) => void;
+  fullWidth?: boolean;
 }
 
-export function ImportModal({ source, existingTrades, onImport }: ImportModalProps) {
+export function ImportModal({ source, existingTrades, onImport, fullWidth }: ImportModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -129,7 +130,7 @@ export function ImportModal({ source, existingTrades, onImport }: ImportModalPro
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className={cn("gap-2", fullWidth && "w-full justify-start")}>
           <Upload className="h-4 w-4" />
           Import from {config.name}
         </Button>

@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AssetToggle } from '@/components/AssetToggle';
 import { HoldingsTable } from '@/components/HoldingsTable';
-import { ImportModal } from '@/components/ImportModal';
-import { ExchangeConnection } from '@/components/ExchangeConnection';
 import { PortfolioSummary } from '@/components/PortfolioSummary';
+import { PortfolioChart } from '@/components/PortfolioChart';
+import { ImportSettingsSheet } from '@/components/ImportSettingsSheet';
 import { Button } from '@/components/ui/button';
-import { Settings, RefreshCw } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { AssetType, Trade, LivePrice } from '@/types/portfolio';
 import { mockTrades, mockPrices } from '@/data/mockData';
 import { calculateHoldings } from '@/lib/calculations';
@@ -101,6 +101,15 @@ export default function Holdings() {
     });
   };
 
+  // Handle delete holdings
+  const handleDeleteHoldings = (symbols: string[]) => {
+    setTrades(prev => prev.filter(t => !symbols.includes(t.symbol)));
+    toast({
+      title: "Holdings deleted",
+      description: `${symbols.length} holding(s) removed from your portfolio.`,
+    });
+  };
+
   // Handle exchange connections
   const handleBinanceConnect = async (apiKey: string, apiSecret: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -125,18 +134,31 @@ export default function Holdings() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold">Holdings</h1>
             
             <AssetToggle value={assetType} onChange={setAssetType} />
             
-            <Link to="/settings">
-              <Button variant="ghost" size="icon" className="touch-target">
-                <Settings className="h-5 w-5" />
-              </Button>
-            </Link>
+            <div className="flex items-center gap-1">
+              <ImportSettingsSheet
+                assetType={assetType}
+                trades={trades}
+                onImport={handleImport}
+                binanceConnected={binanceConnected}
+                gateioConnected={gateioConnected}
+                onBinanceConnect={handleBinanceConnect}
+                onGateioConnect={handleGateioConnect}
+                onBinanceDisconnect={() => setBinanceConnected(false)}
+                onGateioDisconnect={() => setGateioConnected(false)}
+              />
+              <Link to="/settings">
+                <Button variant="ghost" size="icon" className="touch-target">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -144,55 +166,28 @@ export default function Holdings() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 safe-area-bottom">
         <div className="space-y-6">
-          {/* Import/Connect Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              {assetType === 'stock' ? (
-                <>
-                  <ImportModal
-                    source="trading212"
-                    existingTrades={trades}
-                    onImport={handleImport}
-                  />
-                  <ImportModal
-                    source="ibkr"
-                    existingTrades={trades}
-                    onImport={handleImport}
-                  />
-                </>
-              ) : (
-                <>
-                  <ExchangeConnection
-                    exchange="binance"
-                    isConnected={binanceConnected}
-                    onConnect={handleBinanceConnect}
-                    onDisconnect={() => setBinanceConnected(false)}
-                  />
-                  <ExchangeConnection
-                    exchange="gateio"
-                    isConnected={gateioConnected}
-                    onConnect={handleGateioConnect}
-                    onDisconnect={() => setGateioConnected(false)}
-                  />
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              {lastUpdate && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
+          {/* Portfolio Chart */}
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+            <PortfolioChart holdings={holdings} />
+            {lastUpdate && (
+              <div className="flex items-center justify-center gap-1.5 mt-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
+                <span className="text-xs text-muted-foreground">
                   Live · {lastUpdate.toLocaleTimeString()}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Portfolio Summary */}
           <PortfolioSummary holdings={holdings} />
 
           {/* Holdings Table */}
-          <HoldingsTable holdings={holdings} isLoading={isLoading} />
+          <HoldingsTable 
+            holdings={holdings} 
+            isLoading={isLoading}
+            onDeleteHoldings={handleDeleteHoldings}
+          />
         </div>
       </main>
     </div>
