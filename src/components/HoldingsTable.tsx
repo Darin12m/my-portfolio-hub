@@ -213,12 +213,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       </div>
 
       {/* Table Header Row */}
-      <div className="flex border-b border-border/60 bg-muted/20">
-        {/* Fixed Security Header */}
-        <div className={cn(
-          "flex-shrink-0 py-2.5 px-3 border-r border-border/40",
-          isEditMode ? "w-[200px]" : "w-[180px]"
-        )}>
+      <div className="grid grid-cols-[minmax(180px,1.5fr)_repeat(5,1fr)] border-b border-border/60 bg-muted/20">
+        {/* Security Header */}
+        <div className="py-2.5 px-3 border-r border-border/40">
           <div className="flex items-center gap-2">
             {isEditMode && <div className="w-5" />}
             <button
@@ -232,68 +229,69 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
           </div>
         </div>
 
-        {/* Scrollable Headers */}
-        <div 
-          ref={headerScrollRef}
-          className="flex-1 overflow-hidden"
-        >
-          <div className="flex min-w-max divide-x divide-border/40">
-            <div className="w-[100px] py-2.5 px-2 text-center">
-              <button
-                onClick={() => handleSort('quantity')}
-                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
-                disabled={isEditMode}
-              >
-                <span>Position</span>
-                <span>Holding</span>
-                {!isEditMode && <SortIcon field="quantity" />}
-              </button>
-            </div>
-            <div className="w-[110px] py-2.5 px-2 text-center">
-              <button
-                onClick={() => handleSort('cashflow')}
-                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
-                disabled={isEditMode}
-              >
-                <span>Cashflow</span>
-                <span>Per Share</span>
-                {!isEditMode && <SortIcon field="cashflow" />}
-              </button>
-            </div>
-            <div className="w-[100px] py-2.5 px-2 text-center">
-              <button
-                onClick={() => handleSort('value')}
-                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
-                disabled={isEditMode}
-              >
-                <span>Value</span>
-                <span>Per Share</span>
-                {!isEditMode && <SortIcon field="value" />}
-              </button>
-            </div>
-            <div className="w-[100px] py-2.5 px-2 text-center">
-              <button
-                onClick={() => handleSort('pl')}
-                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
-                disabled={isEditMode}
-              >
-                <span>Net P/L</span>
-                <span>In %</span>
-                {!isEditMode && <SortIcon field="pl" />}
-              </button>
-            </div>
-            <div className="w-[70px] py-2.5 px-2 text-center">
-              <button
-                onClick={() => handleSort('allocation')}
-                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
-                disabled={isEditMode}
-              >
-                <span>Alloc</span>
-                <span>%</span>
-                {!isEditMode && <SortIcon field="allocation" />}
-              </button>
-            </div>
-          </div>
+        {/* Position Header */}
+        <div className="py-2.5 px-2 text-center border-r border-border/40">
+          <button
+            onClick={() => handleSort('quantity')}
+            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            disabled={isEditMode}
+          >
+            <span>Position</span>
+            <span>Holding</span>
+            {!isEditMode && <SortIcon field="quantity" />}
+          </button>
+        </div>
+
+        {/* Cashflow Header */}
+        <div className="py-2.5 px-2 text-center border-r border-border/40">
+          <button
+            onClick={() => handleSort('cashflow')}
+            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            disabled={isEditMode}
+          >
+            <span>Cashflow</span>
+            <span>Per Share</span>
+            {!isEditMode && <SortIcon field="cashflow" />}
+          </button>
+        </div>
+
+        {/* Value Header */}
+        <div className="py-2.5 px-2 text-center border-r border-border/40">
+          <button
+            onClick={() => handleSort('value')}
+            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            disabled={isEditMode}
+          >
+            <span>Value</span>
+            <span>Per Share</span>
+            {!isEditMode && <SortIcon field="value" />}
+          </button>
+        </div>
+
+        {/* Net P/L Header */}
+        <div className="py-2.5 px-2 text-center border-r border-border/40">
+          <button
+            onClick={() => handleSort('pl')}
+            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            disabled={isEditMode}
+          >
+            <span>Net P/L</span>
+            <span>In %</span>
+            {!isEditMode && <SortIcon field="pl" />}
+          </button>
+        </div>
+
+        {/* Allocation Header */}
+        <div className="py-2.5 px-2 text-center">
+          <button
+            onClick={() => handleSort('allocation')}
+            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            disabled={isEditMode}
+          >
+            <span>Alloc</span>
+            <span>%</span>
+            {!isEditMode && <SortIcon field="allocation" />}
+          </button>
         </div>
       </div>
 
@@ -304,17 +302,14 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             key={holding.symbol}
             onClick={() => handleRowClick(holding)}
             className={cn(
-              "flex cursor-pointer",
+              "grid grid-cols-[minmax(180px,1.5fr)_repeat(5,1fr)] cursor-pointer",
               "transition-colors duration-150",
               isEditMode && selectedSymbols.has(holding.symbol) && "bg-primary/5",
               !isEditMode && "hover:bg-muted/40 active:bg-muted/60"
             )}
           >
-            {/* Fixed Security Cell */}
-            <div className={cn(
-              "flex-shrink-0 py-2.5 px-3 relative overflow-hidden border-r border-border/40",
-              isEditMode ? "w-[200px]" : "w-[180px]"
-            )}>
+            {/* Security Cell */}
+            <div className="py-2.5 px-3 relative overflow-hidden border-r border-border/40">
               {/* Allocation Bar - behind content */}
               <div 
                 className="absolute inset-0 pointer-events-none"
@@ -368,61 +363,51 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
               </div>
             </div>
 
-            {/* Scrollable Data Cells */}
-            <div 
-              ref={bodyScrollRef}
-              onScroll={handleBodyScroll}
-              className="flex-1 overflow-x-auto scroll-smooth-x"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              <div className="flex min-w-max divide-x divide-border/30">
-                {/* Position / Holding Period */}
-                <div className="w-[100px] py-2.5 px-2 text-center">
-                  <p className="font-semibold text-sm">{formatQuantity(holding.quantity)}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {holding.holdingPeriodDays}d
-                  </p>
-                </div>
+            {/* Position / Holding Period */}
+            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
+              <p className="font-semibold text-sm">{formatQuantity(holding.quantity)}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {holding.holdingPeriodDays}d
+              </p>
+            </div>
 
-                {/* Cumulative Cashflow */}
-                <div className="w-[110px] py-2.5 px-2 text-center">
-                  <p className="font-semibold text-sm">{formatCurrency(holding.investedAmount)}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {formatCurrency(holding.averageBuyPrice)}/sh
-                  </p>
-                </div>
+            {/* Cumulative Cashflow */}
+            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
+              <p className="font-semibold text-sm">{formatCurrency(holding.investedAmount)}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {formatCurrency(holding.averageBuyPrice)}/sh
+              </p>
+            </div>
 
-                {/* Value Per Share */}
-                <div className="w-[100px] py-2.5 px-2 text-center">
-                  <p className="font-semibold text-sm">{formatCurrency(holding.currentValue)}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {formatCurrency(holding.currentPrice)}/sh
-                  </p>
-                </div>
+            {/* Value Per Share */}
+            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
+              <p className="font-semibold text-sm">{formatCurrency(holding.currentValue)}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {formatCurrency(holding.currentPrice)}/sh
+              </p>
+            </div>
 
-                {/* Net Profit/Loss */}
-                <div className="w-[100px] py-2.5 px-2 text-center">
-                  <p className={cn(
-                    "font-semibold text-sm",
-                    holding.unrealizedPL >= 0 ? "text-success" : "text-destructive"
-                  )}>
-                    {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
-                  </p>
-                  <p className={cn(
-                    "text-[10px] font-medium",
-                    holding.unrealizedPLPercent >= 0 ? "text-success" : "text-destructive"
-                  )}>
-                    {holding.unrealizedPLPercent >= 0 ? '+' : ''}{formatPercent(holding.unrealizedPLPercent)}
-                  </p>
-                </div>
+            {/* Net Profit/Loss */}
+            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
+              <p className={cn(
+                "font-semibold text-sm",
+                holding.unrealizedPL >= 0 ? "text-success" : "text-destructive"
+              )}>
+                {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
+              </p>
+              <p className={cn(
+                "text-[10px] font-medium",
+                holding.unrealizedPLPercent >= 0 ? "text-success" : "text-destructive"
+              )}>
+                {holding.unrealizedPLPercent >= 0 ? '+' : ''}{formatPercent(holding.unrealizedPLPercent)}
+              </p>
+            </div>
 
-                {/* Allocation */}
-                <div className="w-[70px] py-2.5 px-2 text-center flex items-center justify-center">
-                  <p className="font-medium text-sm text-muted-foreground">
-                    {formatPercent(holding.allocationPercent)}
-                  </p>
-                </div>
-              </div>
+            {/* Allocation */}
+            <div className="py-2.5 px-2 text-center flex items-center justify-center">
+              <p className="font-medium text-sm text-muted-foreground">
+                {formatPercent(holding.allocationPercent)}
+              </p>
             </div>
           </div>
         ))}
