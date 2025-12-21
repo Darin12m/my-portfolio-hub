@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Trade, TradeSource } from '@/types/portfolio';
+import { normalizeToTicker } from './importService';
 
 interface PortfolioDBSchema extends DBSchema {
   trades: {
@@ -167,4 +168,39 @@ export async function setMetadata(data: { portfolioName?: string; baseCurrency?:
     baseCurrency: data.baseCurrency ?? existing?.baseCurrency ?? 'USD',
     updatedAt: Date.now(),
   });
+}
+
+// ==================== MIGRATION ====================
+
+/**
+ * Migrate existing trades to use proper ticker symbols
+ * Converts company names like "APPLE" to "AAPL"
+ */
+export async function migrateSymbolsToTickers(): Promise<{ migrated: number; total: number }> {
+  const db = await getDb();
+  const trades = await db.getAll('trades');
+  
+  let migrated = 0;
+  const tx = db.transaction('trades', 'readwrite');
+  
+  for (const trade of trades) {
+    const normalizedSymbol = normalizeToTicker(trade.symbol);
+    
+    if (normalizedSymbol !== trade.symbol) {
+      console.log(`Migrating symbol: ${trade.symbol} -> ${normalizedSymbol}`);
+      await tx.store.put({
+        ...trade,
+        symbol: normalizedSymbol,
+      });
+      migrated++;
+    }
+  }
+  
+  await tx.done;
+  
+  if (migrated > 0) {
+    console.log(`Migration complete: ${migrated}/${trades.length} trades updated`);
+  }
+  
+  return { migrated, total: trades.length };
 }

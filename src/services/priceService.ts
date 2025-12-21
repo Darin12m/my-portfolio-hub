@@ -187,86 +187,77 @@ function resolveCryptoId(symbol: string): string | null {
 
 // ==================== STOCK PRICE FETCHING ====================
 
-interface YahooQuoteResult {
+interface YahooChartResult {
   symbol: string;
-  regularMarketPrice?: number;
-  regularMarketChange?: number;
-  regularMarketChangePercent?: number;
-  regularMarketPreviousClose?: number;
-  marketState?: string;
+  regularMarketPrice: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
 }
 
 /**
- * Fetch stock prices from Yahoo Finance v7 quote endpoint (batched)
+ * Fetch stock price from Yahoo Finance v8 chart endpoint
+ * v7 quote endpoint is blocked (401), so we use v8 chart exclusively
  */
-async function fetchYahooQuotes(symbols: string[]): Promise<Map<string, YahooQuoteResult>> {
-  const results = new Map<string, YahooQuoteResult>();
-  
-  if (symbols.length === 0) return results;
-  
-  const tickers = symbols.map(resolveStockTicker);
-  const url = `${CORS_PROXY}${encodeURIComponent(`${YAHOO_QUOTE_URL}?symbols=${tickers.join(',')}`)}`;
-  
-  try {
-    const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-    });
-    
-    if (!response.ok) {
-      console.warn(`Yahoo Finance quote error: ${response.status}`);
-      return results;
-    }
-    
-    const data = await response.json();
-    const quotes = data?.quoteResponse?.result || [];
-    
-    for (const quote of quotes) {
-      results.set(quote.symbol, {
-        symbol: quote.symbol,
-        regularMarketPrice: quote.regularMarketPrice,
-        regularMarketChange: quote.regularMarketChange,
-        regularMarketChangePercent: quote.regularMarketChangePercent,
-        regularMarketPreviousClose: quote.regularMarketPreviousClose,
-        marketState: quote.marketState,
-      });
-    }
-  } catch (error) {
-    console.warn('Yahoo Finance fetch error:', error);
-  }
-  
-  return results;
-}
-
-/**
- * Fetch single stock price with chart endpoint fallback
- */
-async function fetchSingleStockPrice(symbol: string): Promise<number | null> {
+async function fetchYahooChartPrice(symbol: string): Promise<YahooChartResult | null> {
   const ticker = resolveStockTicker(symbol);
   
-  // Try v8 chart endpoint
   try {
     const url = `${CORS_PROXY}${encodeURIComponent(`${YAHOO_CHART_URL}/${ticker}?interval=1d&range=1d`)}`;
     const response = await fetch(url, {
       headers: { 'Accept': 'application/json' },
     });
     
-    if (response.ok) {
-      const data = await response.json();
-      const meta = data?.chart?.result?.[0]?.meta;
-      
-      if (meta?.regularMarketPrice) {
-        return meta.regularMarketPrice;
-      }
-      if (meta?.previousClose) {
-        return meta.previousClose;
-      }
+    if (!response.ok) {
+      console.warn(`Yahoo chart error for ${ticker}: ${response.status}`);
+      return null;
     }
+    
+    const data = await response.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    
+    if (!meta?.regularMarketPrice) {
+      console.warn(`No price data for ${ticker}`);
+      return null;
+    }
+    
+    const previousClose = meta.chartPreviousClose || meta.previousClose;
+    const price = meta.regularMarketPrice;
+    
+    return {
+      symbol: ticker,
+      regularMarketPrice: price,
+      previousClose,
+      change: previousClose ? price - previousClose : undefined,
+      changePercent: previousClose ? ((price - previousClose) / previousClose) * 100 : undefined,
+    };
   } catch (error) {
     console.warn(`Chart endpoint failed for ${ticker}:`, error);
+    return null;
   }
-  
-  return null;
 }
+
+/**
+ * Fetch stock prices in parallel using v8 chart endpoint
+ */
+async function fetchYahooStockPrices(symbols: string[]): Promise<Map<string, YahooChartResult>> {
+  const results = new Map<string, YahooChartResult>();
+  
+  if (symbols.length === 0) return results;
+  
+  // Fetch all in parallel
+  const promises = symbols.map(async (symbol) => {
+    const result = await fetchYahooChartPrice(symbol);
+    if (result) {
+      results.set(symbol, result);
+    }
+  });
+  
+  await Promise.all(promises);
+  
+  return results;
+}
+
 
 // ==================== CRYPTO PRICE FETCHING ====================
 
@@ -387,20 +378,13 @@ export async function fetchPricesBatch(requests: PriceRequest[]): Promise<Map<st
     }
   }
   
-  // Fetch stocks from Yahoo Finance
+  // Fetch stocks from Yahoo Finance v8 chart endpoint (v7 is blocked)
   if (stockSymbols.length > 0) {
-    const yahooResults = await fetchYahooQuotes(stockSymbols);
+    const yahooResults = await fetchYahooStockPrices(stockSymbols);
     
     for (const symbol of stockSymbols) {
-      const ticker = resolveStockTicker(symbol);
-      const quote = yahooResults.get(ticker);
-      
-      let price: number | null = quote?.regularMarketPrice || null;
-      
-      // Fallback to chart endpoint if quote failed
-      if (!price) {
-        price = await fetchSingleStockPrice(symbol);
-      }
+      const chartResult = yahooResults.get(symbol);
+      const price = chartResult?.regularMarketPrice || null;
       
       // Fallback to cache or skip
       const cacheKey = getCacheKey(symbol, 'stock');
