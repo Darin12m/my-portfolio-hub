@@ -44,31 +44,62 @@ export function calculateHoldingPeriodDays(trades: Trade[], symbol: string): num
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
+// Check if all required prices are available
+export function hasAllPrices(trades: Trade[], prices: Map<string, LivePrice>): boolean {
+  const symbols = [...new Set(trades.map(t => t.symbol))];
+  return symbols.every(symbol => prices.has(symbol));
+}
+
+// Calculate global portfolio total from ALL positions
+export function calculateGlobalPortfolioTotal(
+  trades: Trade[],
+  prices: Map<string, LivePrice>
+): number | null {
+  const symbols = [...new Set(trades.map(t => t.symbol))];
+  
+  let total = 0;
+  for (const symbol of symbols) {
+    const quantity = calculateTotalQuantity(trades, symbol);
+    if (quantity <= 0) continue; // Skip closed positions
+    
+    const priceData = prices.get(symbol);
+    if (!priceData) return null; // Missing price - cannot calculate
+    
+    total += quantity * priceData.price;
+  }
+  
+  return total;
+}
+
 // Calculate holdings from trades and live prices
 export function calculateHoldings(
   trades: Trade[],
   prices: Map<string, LivePrice>,
-  assetType: AssetType
+  assetType: AssetType,
+  globalPortfolioTotal?: number | null
 ): Holding[] {
   const filteredTrades = trades.filter(t => t.assetType === assetType);
   const symbols = [...new Set(filteredTrades.map(t => t.symbol))];
   
   const holdings: Holding[] = [];
-  let totalValue = 0;
   
-  // First pass: calculate all holdings without allocation
   for (const symbol of symbols) {
     const quantity = calculateTotalQuantity(filteredTrades, symbol);
-    if (quantity <= 0) continue;
+    if (quantity <= 0) continue; // Skip closed positions (qty = 0)
     
     const avgPrice = calculateAverageBuyPrice(filteredTrades, symbol);
     const investedAmount = calculateInvestedAmount(filteredTrades, symbol);
-    const currentPrice = prices.get(symbol)?.price || avgPrice;
+    const priceData = prices.get(symbol);
+    const currentPrice = priceData?.price || avgPrice;
     const currentValue = quantity * currentPrice;
     const unrealizedPL = currentValue - investedAmount;
     const unrealizedPLPercent = investedAmount > 0 ? (unrealizedPL / investedAmount) * 100 : 0;
     
-    totalValue += currentValue;
+    // Allocation: use global total if provided and valid, otherwise null (show "--")
+    let allocationPercent: number | null = null;
+    if (globalPortfolioTotal && globalPortfolioTotal > 0 && priceData) {
+      allocationPercent = (currentValue / globalPortfolioTotal) * 100;
+    }
     
     holdings.push({
       symbol,
@@ -84,17 +115,13 @@ export function calculateHoldings(
       unrealizedPL,
       unrealizedPLPercent,
       holdingPeriodDays: calculateHoldingPeriodDays(filteredTrades, symbol),
-      allocationPercent: 0,
+      allocationPercent: allocationPercent ?? -1, // -1 indicates incomplete/missing
       cumulativeCashflowPerShare: avgPrice,
       valuePerShare: currentPrice,
     });
   }
   
-  // Second pass: calculate allocation percentages
-  return holdings.map(h => ({
-    ...h,
-    allocationPercent: totalValue > 0 ? (h.currentValue / totalValue) * 100 : 0,
-  }));
+  return holdings;
 }
 
 // Calculate portfolio totals
