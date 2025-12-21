@@ -157,9 +157,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+    <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
       {/* Table Header with Edit Button */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/20">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
           {isEditMode && (
             <>
@@ -174,7 +174,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </>
           )}
           {!isEditMode && (
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {holdings.length} Holdings
             </span>
           )}
@@ -184,27 +184,27 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <Button 
               variant="destructive" 
               size="sm" 
-              className="gap-1.5"
+              className="gap-1.5 h-8"
               onClick={() => setShowDeleteDialog(true)}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
               Delete
             </Button>
           )}
           <Button
             variant={isEditMode ? "secondary" : "ghost"}
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 h-8"
             onClick={isEditMode ? exitEditMode : () => setIsEditMode(true)}
           >
             {isEditMode ? (
               <>
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
                 Done
               </>
             ) : (
               <>
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-3.5 w-3.5" />
                 Edit
               </>
             )}
@@ -213,17 +213,17 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       </div>
 
       {/* Table Header Row */}
-      <div className="flex border-b border-border bg-secondary/10">
+      <div className="flex border-b border-border/60 bg-muted/20">
         {/* Fixed Security Header */}
         <div className={cn(
-          "flex-shrink-0 py-3 px-4 border-r border-border/30",
+          "flex-shrink-0 py-2.5 px-3 border-r border-border/40",
           isEditMode ? "w-[200px]" : "w-[180px]"
         )}>
           <div className="flex items-center gap-2">
             {isEditMode && <div className="w-5" />}
             <button
               onClick={() => handleSort('name')}
-              className="flex items-center gap-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+              className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
               disabled={isEditMode}
             >
               Security
@@ -237,35 +237,33 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
           ref={headerScrollRef}
           className="flex-1 overflow-hidden"
         >
-          <div className="flex min-w-max">
-            <div className="w-[100px] py-3 px-3 text-center">
+          <div className="flex min-w-max divide-x divide-border/40">
+            <div className="w-[100px] py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('quantity')}
-                className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
                 disabled={isEditMode}
               >
                 <span>Position</span>
                 <span>Holding</span>
-                <span>Period</span>
                 {!isEditMode && <SortIcon field="quantity" />}
               </button>
             </div>
-            <div className="w-[120px] py-3 px-3 text-center">
+            <div className="w-[110px] py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('cashflow')}
-                className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
                 disabled={isEditMode}
               >
-                <span>Cumulative</span>
                 <span>Cashflow</span>
                 <span>Per Share</span>
                 {!isEditMode && <SortIcon field="cashflow" />}
               </button>
             </div>
-            <div className="w-[100px] py-3 px-3 text-center">
+            <div className="w-[100px] py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('value')}
-                className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
                 disabled={isEditMode}
               >
                 <span>Value</span>
@@ -273,25 +271,24 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                 {!isEditMode && <SortIcon field="value" />}
               </button>
             </div>
-            <div className="w-[100px] py-3 px-3 text-center">
+            <div className="w-[100px] py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('pl')}
-                className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
                 disabled={isEditMode}
               >
-                <span>Net</span>
-                <span>Profit/Loss</span>
+                <span>Net P/L</span>
                 <span>In %</span>
                 {!isEditMode && <SortIcon field="pl" />}
               </button>
             </div>
-            <div className="w-[80px] py-3 px-3 text-center">
+            <div className="w-[70px] py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('allocation')}
-                className="flex flex-col items-center gap-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+                className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
                 disabled={isEditMode}
               >
-                <span>Allocation</span>
+                <span>Alloc</span>
                 <span>%</span>
                 {!isEditMode && <SortIcon field="allocation" />}
               </button>
@@ -301,21 +298,21 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       </div>
 
       {/* Table Body */}
-      <div className="divide-y divide-border/40">
+      <div className="divide-y divide-border/30">
         {sortedHoldings.map((holding) => (
           <div
             key={holding.symbol}
             onClick={() => handleRowClick(holding)}
             className={cn(
-              "flex touch-feedback cursor-pointer",
-              "transition-all duration-200",
+              "flex cursor-pointer",
+              "transition-colors duration-150",
               isEditMode && selectedSymbols.has(holding.symbol) && "bg-primary/5",
-              !isEditMode && "hover:bg-secondary/30 active:bg-secondary/50"
+              !isEditMode && "hover:bg-muted/40 active:bg-muted/60"
             )}
           >
             {/* Fixed Security Cell */}
             <div className={cn(
-              "flex-shrink-0 py-3 px-4 relative overflow-hidden border-r border-border/30",
+              "flex-shrink-0 py-2.5 px-3 relative overflow-hidden border-r border-border/40",
               isEditMode ? "w-[200px]" : "w-[180px]"
             )}>
               {/* Allocation Bar - behind content */}
@@ -324,7 +321,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                 aria-hidden="true"
               >
                 <div 
-                  className="h-full bg-allocation-bar/10 dark:bg-allocation-bar/20 allocation-bar-enter rounded-r-lg"
+                  className="h-full bg-primary/8 dark:bg-primary/15 allocation-bar-enter rounded-r"
                   style={{ 
                     width: `${Math.min(holding.allocationPercent, 100)}%`,
                     minWidth: holding.allocationPercent > 0 ? '4px' : '0'
@@ -343,11 +340,8 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                   />
                 )}
                 
-                {/* Accent bar */}
-                <div className="w-1 h-10 rounded-full flex-shrink-0 bg-primary/60" />
-                
                 {/* Logo */}
-                <div className="w-9 h-9 rounded-xl bg-secondary/60 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <img
                     src={holding.logoUrl}
                     alt={holding.symbol}
@@ -357,17 +351,17 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                       (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                     }}
                   />
-                  <span className="text-xs font-semibold text-muted-foreground hidden">
+                  <span className="text-[10px] font-bold text-muted-foreground hidden">
                     {holding.symbol.substring(0, 2)}
                   </span>
                 </div>
                 
                 {/* Name & ISIN */}
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-primary text-sm truncate leading-tight">
+                  <p className="font-medium text-primary text-sm truncate leading-tight hover:underline">
                     {holding.name}
                   </p>
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p className="text-[10px] text-muted-foreground truncate">
                     {holding.assetType === 'stock' ? holding.isin : holding.symbol}
                   </p>
                 </div>
@@ -381,41 +375,41 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
               className="flex-1 overflow-x-auto scroll-smooth-x"
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
-              <div className="flex min-w-max">
+              <div className="flex min-w-max divide-x divide-border/30">
                 {/* Position / Holding Period */}
-                <div className="w-[100px] py-3 px-3 text-center">
-                  <p className="font-medium text-sm">{formatQuantity(holding.quantity)}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {holding.holdingPeriodDays} days
+                <div className="w-[100px] py-2.5 px-2 text-center">
+                  <p className="font-semibold text-sm">{formatQuantity(holding.quantity)}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {holding.holdingPeriodDays}d
                   </p>
                 </div>
 
                 {/* Cumulative Cashflow */}
-                <div className="w-[120px] py-3 px-3 text-center">
-                  <p className="font-medium text-sm">{formatCurrency(holding.investedAmount)}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {formatCurrency(holding.averageBuyPrice)}/share
+                <div className="w-[110px] py-2.5 px-2 text-center">
+                  <p className="font-semibold text-sm">{formatCurrency(holding.investedAmount)}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatCurrency(holding.averageBuyPrice)}/sh
                   </p>
                 </div>
 
                 {/* Value Per Share */}
-                <div className="w-[100px] py-3 px-3 text-center">
-                  <p className="font-medium text-sm">{formatCurrency(holding.currentValue)}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {formatCurrency(holding.currentPrice)}/share
+                <div className="w-[100px] py-2.5 px-2 text-center">
+                  <p className="font-semibold text-sm">{formatCurrency(holding.currentValue)}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatCurrency(holding.currentPrice)}/sh
                   </p>
                 </div>
 
                 {/* Net Profit/Loss */}
-                <div className="w-[100px] py-3 px-3 text-center">
+                <div className="w-[100px] py-2.5 px-2 text-center">
                   <p className={cn(
-                    "font-medium text-sm",
+                    "font-semibold text-sm",
                     holding.unrealizedPL >= 0 ? "text-success" : "text-destructive"
                   )}>
                     {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
                   </p>
                   <p className={cn(
-                    "text-[11px]",
+                    "text-[10px] font-medium",
                     holding.unrealizedPLPercent >= 0 ? "text-success" : "text-destructive"
                   )}>
                     {holding.unrealizedPLPercent >= 0 ? '+' : ''}{formatPercent(holding.unrealizedPLPercent)}
@@ -423,7 +417,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                 </div>
 
                 {/* Allocation */}
-                <div className="w-[80px] py-3 px-3 text-center">
+                <div className="w-[70px] py-2.5 px-2 text-center flex items-center justify-center">
                   <p className="font-medium text-sm text-muted-foreground">
                     {formatPercent(holding.allocationPercent)}
                   </p>

@@ -40,6 +40,8 @@
     /* Custom colors for fintech */
     --profit: 142 76% 36%;
     --profit-foreground: 142 76% 95%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
     --loss: 0 84% 55%;
     --loss-foreground: 0 84% 95%;
     
@@ -107,6 +109,8 @@
     
     --profit: 142 76% 45%;
     --profit-foreground: 142 76% 90%;
+    --success: 142 76% 45%;
+    --success-foreground: 222 47% 6%;
     --loss: 0 84% 60%;
     --loss-foreground: 0 84% 90%;
     

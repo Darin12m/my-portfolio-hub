@@ -54,6 +54,10 @@ export default {
           DEFAULT: "hsl(var(--profit))",
           foreground: "hsl(var(--profit-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         loss: {
           DEFAULT: "hsl(var(--loss))",
           foreground: "hsl(var(--loss-foreground))",
