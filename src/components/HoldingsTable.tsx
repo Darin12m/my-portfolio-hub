@@ -311,16 +311,16 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
           >
             {/* Security Cell */}
             <div className="py-2.5 px-3 relative overflow-hidden border-r border-border/40">
-              {/* Allocation Bar - behind content */}
+              {/* Allocation Bar - behind content with gradient fade */}
               <div 
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none overflow-hidden"
                 aria-hidden="true"
               >
                 <div 
-                  className="h-full bg-primary/8 dark:bg-primary/15 allocation-bar-enter rounded-r"
+                  className="h-full rounded-r transition-all duration-500 ease-out allocation-bar"
                   style={{ 
                     width: `${Math.min(holding.allocationPercent, 100)}%`,
-                    minWidth: holding.allocationPercent > 0 ? '4px' : '0'
+                    minWidth: holding.allocationPercent > 0 ? '4px' : '0',
                   }}
                 />
               </div>
