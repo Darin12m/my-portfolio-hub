@@ -164,8 +164,9 @@ export default function Holdings() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 safe-area-bottom">
-        <div className="space-y-6">
+      <main className="safe-area-bottom">
+        {/* Chart and Summary - contained */}
+        <div className="container mx-auto px-4 py-6 space-y-6">
           {/* Trading Chart */}
           <TradingChart holdings={holdings} />
           
@@ -181,8 +182,10 @@ export default function Holdings() {
 
           {/* Portfolio Summary */}
           <PortfolioSummary holdings={holdings} />
+        </div>
 
-          {/* Holdings Table */}
+        {/* Holdings Table - full width on desktop */}
+        <div className="w-full px-4 lg:px-6 xl:px-8 pb-6">
           <HoldingsTable 
             holdings={holdings} 
             isLoading={isLoading}
