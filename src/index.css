@@ -262,9 +262,25 @@
     @apply transition-transform active:scale-[0.99];
   }
 
-  /* Allocation bar animation */
-  .allocation-bar-enter {
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Allocation bar with gradient fade */
+  .allocation-bar {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--allocation-bar) / 0.08) 0%,
+      hsl(var(--allocation-bar) / 0.12) 50%,
+      hsl(var(--allocation-bar) / 0.06) 80%,
+      transparent 100%
+    );
+  }
+  
+  .dark .allocation-bar {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--allocation-bar) / 0.12) 0%,
+      hsl(var(--allocation-bar) / 0.18) 50%,
+      hsl(var(--allocation-bar) / 0.08) 80%,
+      transparent 100%
+    );
   }
   
   /* Trading chart container - always dark */
