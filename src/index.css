@@ -262,13 +262,13 @@
     @apply transition-transform active:scale-[0.99];
   }
 
-  /* Allocation bar with gradient fade */
+  /* Allocation bar with gradient fade - soft blue like reference */
   .allocation-bar {
     background: linear-gradient(
       90deg,
-      hsl(var(--allocation-bar) / 0.08) 0%,
-      hsl(var(--allocation-bar) / 0.12) 50%,
-      hsl(var(--allocation-bar) / 0.06) 80%,
+      rgba(59, 130, 246, 0.12) 0%,
+      rgba(59, 130, 246, 0.18) 40%,
+      rgba(59, 130, 246, 0.10) 70%,
       transparent 100%
     );
   }
@@ -276,9 +276,9 @@
   .dark .allocation-bar {
     background: linear-gradient(
       90deg,
-      hsl(var(--allocation-bar) / 0.12) 0%,
-      hsl(var(--allocation-bar) / 0.18) 50%,
-      hsl(var(--allocation-bar) / 0.08) 80%,
+      rgba(59, 130, 246, 0.15) 0%,
+      rgba(59, 130, 246, 0.22) 40%,
+      rgba(59, 130, 246, 0.10) 70%,
       transparent 100%
     );
   }
