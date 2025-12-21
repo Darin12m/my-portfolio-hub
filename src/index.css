@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    /* Light theme */
-    --background: 210 40% 98%;
+    /* Light theme - clean, soft, Apple-like */
+    --background: 210 20% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -16,26 +16,26 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 50%;
+    --primary: 217 91% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
+    --secondary: 210 20% 96%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 93%;
+    --muted: 210 20% 93%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 50%;
+    --accent: 217 91% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 50%;
+    --border: 214 20% 92%;
+    --input: 214 20% 92%;
+    --ring: 217 91% 55%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Custom colors for fintech */
     --profit: 142 76% 36%;
@@ -43,22 +43,22 @@
     --loss: 0 84% 55%;
     --loss-foreground: 0 84% 95%;
     
-    --chart-1: 217 91% 50%;
+    --chart-1: 217 91% 55%;
     --chart-2: 142 76% 36%;
     --chart-3: 45 93% 47%;
     --chart-4: 280 65% 55%;
     --chart-5: 0 84% 55%;
     
-    --allocation-bar: 217 70% 70%;
+    --allocation-bar: 217 80% 60%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary: 217 91% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent: 210 20% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 50%;
+    --sidebar-border: 214 20% 92%;
+    --sidebar-ring: 217 91% 55%;
   }
 
   .dark {
@@ -227,7 +227,7 @@
 
   /* Active states for touch feedback */
   .touch-feedback {
-    @apply transition-transform active:scale-[0.98];
+    @apply transition-transform active:scale-[0.99];
   }
 
   /* Allocation bar animation */
@@ -244,4 +244,15 @@
     z-index: 1;
     background: hsl(var(--card));
   }
+}
+
+/* Card shadows for light mode only */
+@media (prefers-color-scheme: light) {
+  .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  }
+}
+
+.light .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.05);
 }

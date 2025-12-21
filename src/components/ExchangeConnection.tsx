@@ -15,18 +15,20 @@ import { cn } from '@/lib/utils';
 
 type Exchange = 'binance' | 'gateio';
 
-interface ExchangeConnectionProps {
+export interface ExchangeConnectionProps {
   exchange: Exchange;
   isConnected: boolean;
   onConnect: (apiKey: string, apiSecret: string) => Promise<boolean>;
   onDisconnect: () => void;
+  fullWidth?: boolean;
 }
 
 export function ExchangeConnection({ 
   exchange, 
   isConnected, 
   onConnect, 
-  onDisconnect 
+  onDisconnect,
+  fullWidth,
 }: ExchangeConnectionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -104,7 +106,7 @@ export function ExchangeConnection({
         <Button 
           variant={isConnected ? "secondary" : "outline"} 
           size="sm" 
-          className={cn("gap-2", isConnected && "border-profit/30 text-profit")}
+          className={cn("gap-2", isConnected && "border-profit/30 text-profit", fullWidth && "w-full justify-start")}
         >
           {isConnected ? (
             <>
