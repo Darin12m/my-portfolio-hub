@@ -14,36 +14,158 @@ const CACHE_DURATION = 30000; // 30 seconds
 // CORS proxy for Yahoo Finance (stocks)
 const CORS_PROXY = 'https://corsproxy.io/?';
 
-// Binance public API (CORS enabled)
+// CoinGecko public API (CORS enabled, no auth required)
+const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+
+// Binance public API (CORS enabled) - fallback
 const BINANCE_API = 'https://api.binance.com/api/v3';
 
-// Gate.io public API (CORS enabled)
-const GATEIO_API = 'https://api.gateio.ws/api/v4';
-
-// Symbol mapping for crypto (exchange-specific formats)
-const cryptoSymbolMap: Record<string, { binance?: string; gateio?: string }> = {
-  'BTC': { binance: 'BTCUSDT', gateio: 'BTC_USDT' },
-  'ETH': { binance: 'ETHUSDT', gateio: 'ETH_USDT' },
-  'SOL': { binance: 'SOLUSDT', gateio: 'SOL_USDT' },
-  'XRP': { binance: 'XRPUSDT', gateio: 'XRP_USDT' },
-  'ADA': { binance: 'ADAUSDT', gateio: 'ADA_USDT' },
-  'DOGE': { binance: 'DOGEUSDT', gateio: 'DOGE_USDT' },
-  'DOT': { binance: 'DOTUSDT', gateio: 'DOT_USDT' },
-  'LINK': { binance: 'LINKUSDT', gateio: 'LINK_USDT' },
-  'AVAX': { binance: 'AVAXUSDT', gateio: 'AVAX_USDT' },
-  'MATIC': { binance: 'MATICUSDT', gateio: 'MATIC_USDT' },
+// Map company names to Yahoo Finance ticker symbols
+const companyToTickerMap: Record<string, string> = {
+  'APPLE': 'AAPL',
+  'MICROSOFT': 'MSFT',
+  'AMAZON': 'AMZN',
+  'ALPHABET (CLASS A)': 'GOOGL',
+  'ALPHABET (CLASS C)': 'GOOG',
+  'ALPHABET': 'GOOGL',
+  'META PLATFORMS': 'META',
+  'TESLA': 'TSLA',
+  'NVIDIA': 'NVDA',
+  'BROADCOM': 'AVGO',
+  'PALANTIR': 'PLTR',
+  'PALANTIR TECHNOLOGIES': 'PLTR',
+  'SNOWFLAKE': 'SNOW',
+  'SOFI TECHNOLOGIES': 'SOFI',
+  'SOFI': 'SOFI',
+  'ROBINHOOD MARKETS': 'HOOD',
+  'ROBINHOOD': 'HOOD',
+  'NETFLIX': 'NFLX',
+  'AMD': 'AMD',
+  'ADVANCED MICRO DEVICES': 'AMD',
+  'INTEL': 'INTC',
+  'DISNEY': 'DIS',
+  'WALT DISNEY': 'DIS',
+  'VISA': 'V',
+  'MASTERCARD': 'MA',
+  'JPMORGAN': 'JPM',
+  'JPMORGAN CHASE': 'JPM',
+  'BANK OF AMERICA': 'BAC',
+  'GOLDMAN SACHS': 'GS',
+  'BERKSHIRE HATHAWAY': 'BRK-B',
+  'JOHNSON & JOHNSON': 'JNJ',
+  'UNITEDHEALTH': 'UNH',
+  'WALMART': 'WMT',
+  'HOME DEPOT': 'HD',
+  'COSTCO': 'COST',
+  'SALESFORCE': 'CRM',
+  'ADOBE': 'ADBE',
+  'ORACLE': 'ORCL',
+  'CISCO': 'CSCO',
+  'PAYPAL': 'PYPL',
+  'SPOTIFY': 'SPOT',
+  'UBER': 'UBER',
+  'AIRBNB': 'ABNB',
+  'COINBASE': 'COIN',
+  'SHOPIFY': 'SHOP',
+  'SQUARE': 'SQ',
+  'BLOCK': 'SQ',
+  'ZOOM': 'ZM',
+  'ZOOM VIDEO': 'ZM',
+  'DOCUSIGN': 'DOCU',
+  'CROWDSTRIKE': 'CRWD',
+  'DATADOG': 'DDOG',
+  'TWILIO': 'TWLO',
+  'OKTA': 'OKTA',
+  'ATLASSIAN': 'TEAM',
+  'SERVICENOW': 'NOW',
+  'WORKDAY': 'WDAY',
+  'SPLUNK': 'SPLK',
+  'PALO ALTO NETWORKS': 'PANW',
+  'FORTINET': 'FTNT',
+  'ZSCALER': 'ZS',
+  'CLOUDFLARE': 'NET',
+  'MONGODB': 'MDB',
+  'ELASTIC': 'ESTC',
+  'CONFLUENT': 'CFLT',
+  'SNOWFLAKE INC': 'SNOW',
 };
+
+// Map crypto symbols to CoinGecko IDs
+const cryptoToCoinGeckoMap: Record<string, string> = {
+  'BTC': 'bitcoin',
+  'ETH': 'ethereum',
+  'SOL': 'solana',
+  'XRP': 'ripple',
+  'ADA': 'cardano',
+  'DOGE': 'dogecoin',
+  'DOT': 'polkadot',
+  'LINK': 'chainlink',
+  'AVAX': 'avalanche-2',
+  'MATIC': 'matic-network',
+  'ATOM': 'cosmos',
+  'UNI': 'uniswap',
+  'LTC': 'litecoin',
+  'BCH': 'bitcoin-cash',
+  'ALGO': 'algorand',
+  'FTM': 'fantom',
+  'NEAR': 'near',
+  'APE': 'apecoin',
+  'SAND': 'the-sandbox',
+  'MANA': 'decentraland',
+  'CRO': 'crypto-com-chain',
+  'SHIB': 'shiba-inu',
+  'TRX': 'tron',
+  'ETC': 'ethereum-classic',
+  'XLM': 'stellar',
+  'VET': 'vechain',
+  'FIL': 'filecoin',
+  'HBAR': 'hedera-hashgraph',
+  'ICP': 'internet-computer',
+  'AAVE': 'aave',
+};
+
+// Symbol mapping for Binance (fallback)
+const cryptoToBinanceMap: Record<string, string> = {
+  'BTC': 'BTCUSDT',
+  'ETH': 'ETHUSDT',
+  'SOL': 'SOLUSDT',
+  'XRP': 'XRPUSDT',
+  'ADA': 'ADAUSDT',
+  'DOGE': 'DOGEUSDT',
+  'DOT': 'DOTUSDT',
+  'LINK': 'LINKUSDT',
+  'AVAX': 'AVAXUSDT',
+  'MATIC': 'MATICUSDT',
+};
+
+/**
+ * Resolve a symbol to its Yahoo Finance ticker
+ * Handles both actual tickers (AAPL) and company names (APPLE)
+ */
+function resolveStockTicker(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  
+  // If it's already a known ticker (2-5 chars, no spaces), use it
+  if (/^[A-Z]{1,5}(-[A-Z])?$/.test(upper)) {
+    return upper;
+  }
+  
+  // Look up in company name map
+  return companyToTickerMap[upper] || upper;
+}
 
 // Fetch stock price from Yahoo Finance
 async function fetchYahooPrice(symbol: string): Promise<number | null> {
+  const ticker = resolveStockTicker(symbol);
+  
   try {
-    const url = `${CORS_PROXY}${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`)}`;
+    const url = `${CORS_PROXY}${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`)}`;
     const response = await fetch(url, {
       headers: { 'Accept': 'application/json' }
     });
     
     if (!response.ok) {
-      console.warn(`Yahoo Finance error for ${symbol}: ${response.status}`);
+      console.warn(`Yahoo Finance error for ${ticker}: ${response.status}`);
       return null;
     }
     
@@ -61,15 +183,42 @@ async function fetchYahooPrice(symbol: string): Promise<number | null> {
     
     return null;
   } catch (error) {
-    console.warn(`Failed to fetch Yahoo price for ${symbol}:`, error);
+    console.warn(`Failed to fetch Yahoo price for ${ticker}:`, error);
     return null;
   }
 }
 
-// Fetch crypto price from Binance
-async function fetchBinancePrice(symbol: string): Promise<number | null> {
+// Fetch crypto price from CoinGecko (primary source)
+async function fetchCoinGeckoPrice(symbol: string): Promise<number | null> {
+  const coinId = cryptoToCoinGeckoMap[symbol.toUpperCase()];
+  if (!coinId) {
+    console.warn(`No CoinGecko mapping for ${symbol}`);
+    return null;
+  }
+  
   try {
-    const binanceSymbol = cryptoSymbolMap[symbol.toUpperCase()]?.binance || `${symbol.toUpperCase()}USDT`;
+    const response = await fetch(
+      `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`
+    );
+    
+    if (!response.ok) {
+      console.warn(`CoinGecko error for ${symbol}: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data?.[coinId]?.usd || null;
+  } catch (error) {
+    console.warn(`Failed to fetch CoinGecko price for ${symbol}:`, error);
+    return null;
+  }
+}
+
+// Fetch crypto price from Binance (fallback)
+async function fetchBinancePrice(symbol: string): Promise<number | null> {
+  const binanceSymbol = cryptoToBinanceMap[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
+  
+  try {
     const response = await fetch(`${BINANCE_API}/ticker/price?symbol=${binanceSymbol}`);
     
     if (!response.ok) {
@@ -80,24 +229,6 @@ async function fetchBinancePrice(symbol: string): Promise<number | null> {
     return data?.price ? parseFloat(data.price) : null;
   } catch (error) {
     console.warn(`Failed to fetch Binance price for ${symbol}:`, error);
-    return null;
-  }
-}
-
-// Fetch crypto price from Gate.io (fallback)
-async function fetchGateioPrice(symbol: string): Promise<number | null> {
-  try {
-    const gateioSymbol = cryptoSymbolMap[symbol.toUpperCase()]?.gateio || `${symbol.toUpperCase()}_USDT`;
-    const response = await fetch(`${GATEIO_API}/spot/tickers?currency_pair=${gateioSymbol}`);
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    const data = await response.json();
-    return data?.[0]?.last ? parseFloat(data[0].last) : null;
-  } catch (error) {
-    console.warn(`Failed to fetch Gate.io price for ${symbol}:`, error);
     return null;
   }
 }
@@ -120,13 +251,13 @@ export async function fetchPrice(symbol: string, assetType: AssetType): Promise<
       price = await fetchYahooPrice(symbol);
       source = 'yahoo';
     } else {
-      // Try Binance first, then Gate.io
-      price = await fetchBinancePrice(symbol);
-      source = 'binance';
+      // Try CoinGecko first, then Binance as fallback
+      price = await fetchCoinGeckoPrice(symbol);
+      source = 'coingecko';
       
       if (price === null) {
-        price = await fetchGateioPrice(symbol);
-        source = 'gateio';
+        price = await fetchBinancePrice(symbol);
+        source = 'binance';
       }
     }
 
@@ -136,7 +267,9 @@ export async function fetchPrice(symbol: string, assetType: AssetType): Promise<
         console.warn(`Using stale cache for ${symbol}`);
         return cached.price;
       }
-      price = mockPrices[symbol] || mockPrices[symbol.toUpperCase()] || 0;
+      // Try to find in mock prices with resolved ticker
+      const resolvedSymbol = assetType === 'stock' ? resolveStockTicker(symbol) : symbol.toUpperCase();
+      price = mockPrices[resolvedSymbol] || mockPrices[symbol] || mockPrices[symbol.toUpperCase()] || 0;
       source = 'fallback';
     }
 

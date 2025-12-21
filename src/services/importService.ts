@@ -5,7 +5,9 @@ import { Trade, TradeSource } from '@/types/portfolio';
 
 const COLUMN_ALIASES = {
   action: ['action', 'type', 'transaction', 'operation', 'trade type', 'order type'],
-  symbol: ['ticker', 'symbol', 'instrument', 'asset', 'stock', 'name', 'security'],
+  // IMPORTANT: 'ticker' and 'symbol' must come BEFORE 'name' to prioritize actual ticker symbols
+  ticker: ['ticker', 'symbol'], // Priority column for actual ticker symbols
+  name: ['name', 'security', 'instrument', 'asset', 'stock'], // Secondary - company names
   isin: ['isin', 'instrument id', 'security id', 'identifier'],
   quantity: ['no. of shares', 'quantity', 'shares', 'units', 'amount', 'qty', 'size', 'volume'],
   price: ['price / share', 'price', 'execution price', 'unit price', 'share price', 'avg price', 'fill price'],
@@ -77,7 +79,8 @@ function getTradeSide(action: string): 'buy' | 'sell' | null {
 
 interface ColumnMap {
   action: number | null;
-  symbol: number | null;
+  ticker: number | null;  // Actual ticker symbol column
+  name: number | null;    // Company name column
   isin: number | null;
   quantity: number | null;
   price: number | null;
@@ -93,7 +96,8 @@ interface ColumnMap {
 function detectColumns(headers: string[]): ColumnMap {
   const columnMap: ColumnMap = {
     action: null,
-    symbol: null,
+    ticker: null,
+    name: null,
     isin: null,
     quantity: null,
     price: null,
@@ -266,8 +270,8 @@ export function parseFlexibleCSV(
     const columns = detectColumns(headers);
 
     // Validate we have minimum required columns
-    if (columns.action === null && columns.symbol === null) {
-      errors.push('Could not detect required columns (action or symbol). Headers found: ' + headers.join(', '));
+    if (columns.action === null && columns.ticker === null && columns.name === null) {
+      errors.push('Could not detect required columns (action or symbol/name). Headers found: ' + headers.join(', '));
       return { trades, errors, stats: { totalRows: lines.length - 1, tradesFound: 0, rowsSkipped: lines.length - 1, skipReasons } };
     }
 
@@ -319,12 +323,16 @@ export function parseFlexibleCSV(
           continue;
         }
 
-        // Get symbol
-        const symbol = columns.symbol !== null ? values[columns.symbol]?.trim().toUpperCase() : '';
+        // Get symbol - prioritize ticker column, then ISIN, then name as last resort
+        const ticker = columns.ticker !== null ? values[columns.ticker]?.trim().toUpperCase() : '';
+        const name = columns.name !== null ? values[columns.name]?.trim() : '';
         const isin = columns.isin !== null ? values[columns.isin]?.trim().toUpperCase() : undefined;
 
-        // Must have symbol or ISIN
-        if (!symbol && !isin) {
+        // Use ticker if available, otherwise fall back to name or ISIN
+        const symbol = ticker || '';
+
+        // Must have ticker, name, or ISIN
+        if (!ticker && !name && !isin) {
           addSkipReason('Missing symbol/ISIN');
           continue;
         }
@@ -361,10 +369,13 @@ export function parseFlexibleCSV(
         const currency = columns.currency !== null ? values[columns.currency]?.trim().toUpperCase() : undefined;
         const fee = columns.fee !== null ? parseNumber(values[columns.fee]) || 0 : 0;
 
-        // Create trade object
+        // Create trade object - use ticker if available, else ISIN, else name
+        // The symbol should be the actual ticker for price lookup to work
+        const finalSymbol = ticker || isin || name.toUpperCase() || 'UNKNOWN';
+        
         const trade: Trade = {
           id: `${source}_${Date.now()}_${i}`,
-          symbol: symbol || isin || 'UNKNOWN',
+          symbol: finalSymbol,
           assetType: 'stock', // Default to stock, can be enhanced later
           side,
           quantity, // Full precision preserved
