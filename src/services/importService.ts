@@ -1,63 +1,138 @@
-import { Trade, TradeSource } from '@/types/portfolio';
+/**
+ * Universal CSV Import Service
+ * 
+ * Format-tolerant parser that works with Trading212, IBKR, and similar formats.
+ * Uses column alias detection instead of exact column names.
+ * 
+ * Features:
+ * - Flexible column detection via aliases
+ * - Robust action recognition (buy/sell)
+ * - Full precision quantity/price preservation
+ * - Detailed import diagnostics
+ */
+
+import { Trade, TradeSource, AssetType } from '@/types/portfolio';
 
 // ==================== COLUMN ALIASES ====================
-// Each field can be matched by multiple column name variations
 
 const COLUMN_ALIASES = {
-  action: ['action', 'type', 'transaction', 'operation', 'trade type', 'order type'],
-  // IMPORTANT: 'ticker' and 'symbol' must come BEFORE 'name' to prioritize actual ticker symbols
-  ticker: ['ticker', 'symbol'], // Priority column for actual ticker symbols
-  name: ['name', 'security', 'instrument', 'asset', 'stock'], // Secondary - company names
-  isin: ['isin', 'instrument id', 'security id', 'identifier'],
-  quantity: ['no. of shares', 'quantity', 'shares', 'units', 'amount', 'qty', 'size', 'volume'],
-  price: ['price / share', 'price', 'execution price', 'unit price', 'share price', 'avg price', 'fill price'],
-  total: ['total', 'value', 'total value', 'amount', 'net amount', 'gross amount'],
-  date: ['time', 'date', 'execution time', 'timestamp', 'trade date', 'date/time', 'datetime', 'executed at'],
-  currency: ['currency', 'base currency', 'ccy', 'currency code'],
-  fee: ['fee', 'commission', 'currency conversion fee', 'charges', 'costs', 'comm/fee'],
+  // Action/Type column
+  action: [
+    'action', 'type', 'transaction', 'operation', 
+    'trade type', 'order type', 'side', 'direction'
+  ],
+  
+  // Ticker/Symbol - HIGHEST PRIORITY for symbol detection
+  ticker: [
+    'ticker', 'symbol', 'ticker symbol', 'stock symbol'
+  ],
+  
+  // Instrument/Name - Secondary for symbol detection
+  instrument: [
+    'instrument', 'name', 'security', 'asset', 'stock', 
+    'security name', 'description', 'company'
+  ],
+  
+  // ISIN - Fallback identifier
+  isin: [
+    'isin', 'instrument id', 'security id', 'identifier', 
+    'cusip', 'sedol', 'figi'
+  ],
+  
+  // Quantity
+  quantity: [
+    'no. of shares', 'quantity', 'shares', 'units', 'amount',
+    'qty', 'size', 'volume', 'no of shares', 'num shares',
+    'share quantity', 'filled qty', 'executed qty'
+  ],
+  
+  // Price
+  price: [
+    'price / share', 'price', 'execution price', 'unit price',
+    'share price', 'avg price', 'fill price', 'price per share',
+    'executed price', 'average price', 'cost basis'
+  ],
+  
+  // Total value
+  total: [
+    'total', 'value', 'total value', 'amount', 'net amount',
+    'gross amount', 'total cost', 'proceeds', 'cost'
+  ],
+  
+  // Date/Time
+  date: [
+    'time', 'date', 'execution time', 'timestamp', 'trade date',
+    'date/time', 'datetime', 'executed at', 'trade time',
+    'settlement date', 'order date'
+  ],
+  
+  // Currency
+  currency: [
+    'currency', 'base currency', 'ccy', 'currency code',
+    'trade currency', 'settlement currency'
+  ],
+  
+  // Fees
+  fee: [
+    'fee', 'commission', 'currency conversion fee', 'charges',
+    'costs', 'comm/fee', 'fees', 'transaction fee', 'total fees'
+  ],
 };
 
 // ==================== ACTION RECOGNITION ====================
 
-const BUY_ACTIONS = ['buy', 'market buy', 'limit buy', 'purchase', 'bought', 'long'];
-const SELL_ACTIONS = ['sell', 'market sell', 'limit sell', 'sold', 'short', 'sale'];
-const VALID_TRADE_ACTIONS = [...BUY_ACTIONS, ...SELL_ACTIONS];
+const BUY_ACTIONS = [
+  'buy', 'market buy', 'limit buy', 'purchase', 'bought', 
+  'long', 'open', 'add', 'acquire'
+];
+
+const SELL_ACTIONS = [
+  'sell', 'market sell', 'limit sell', 'sold', 'short',
+  'sale', 'close', 'reduce', 'dispose'
+];
 
 const IGNORED_ACTIONS = [
   'deposit', 'withdrawal', 'withdraw',
-  'dividend', 'dividends', 'div',
-  'interest', 'lending interest',
+  'dividend', 'dividends', 'div', 'distribution',
+  'interest', 'lending interest', 'interest payment',
   'fx', 'fx conversion', 'currency conversion', 'forex',
-  'fee', 'fees', 'commission',
-  'tax', 'taxes', 'withholding tax',
-  'transfer', 'internal transfer',
+  'fee', 'fees', 'commission', 'service fee',
+  'tax', 'taxes', 'withholding tax', 'tax withheld',
+  'transfer', 'internal transfer', 'account transfer',
   'split', 'stock split', 'reverse split',
-  'merger', 'spinoff', 'corporate action',
-  'cash', 'cash in', 'cash out',
-  'adjustment', 'correction',
+  'merger', 'spinoff', 'spin-off', 'corporate action',
+  'cash', 'cash in', 'cash out', 'cash deposit',
+  'adjustment', 'correction', 'rebalance',
+  'journal', 'journaling',
 ];
 
+// ==================== HELPER FUNCTIONS ====================
+
 /**
- * Normalize a string for comparison (lowercase, trimmed, remove extra spaces)
+ * Normalize a string for comparison
  */
 function normalize(str: string): string {
   return str.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
 /**
- * Check if an action is a valid trade action
+ * Check if action is a valid trade action
  */
 function isTradeAction(action: string): boolean {
   const normalized = normalize(action);
-  return VALID_TRADE_ACTIONS.some(valid => normalized.includes(valid) || valid.includes(normalized));
+  return [...BUY_ACTIONS, ...SELL_ACTIONS].some(valid => 
+    normalized.includes(valid) || valid.includes(normalized)
+  );
 }
 
 /**
- * Check if an action should be ignored
+ * Check if action should be ignored
  */
 function isIgnoredAction(action: string): boolean {
   const normalized = normalize(action);
-  return IGNORED_ACTIONS.some(ignored => normalized.includes(ignored) || normalized === ignored);
+  return IGNORED_ACTIONS.some(ignored => 
+    normalized.includes(ignored) || normalized === ignored
+  );
 }
 
 /**
@@ -66,21 +141,47 @@ function isIgnoredAction(action: string): boolean {
 function getTradeSide(action: string): 'buy' | 'sell' | null {
   const normalized = normalize(action);
   
-  if (BUY_ACTIONS.some(buy => normalized.includes(buy) || buy.includes(normalized))) {
+  if (BUY_ACTIONS.some(buy => normalized.includes(buy))) {
     return 'buy';
   }
-  if (SELL_ACTIONS.some(sell => normalized.includes(sell) || sell.includes(normalized))) {
+  if (SELL_ACTIONS.some(sell => normalized.includes(sell))) {
     return 'sell';
   }
   return null;
+}
+
+/**
+ * Detect if a symbol looks like crypto
+ */
+function detectAssetType(symbol: string): AssetType {
+  const cryptoSymbols = [
+    'BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'DOT', 'LINK', 'AVAX', 'MATIC',
+    'ATOM', 'UNI', 'LTC', 'BCH', 'ALGO', 'FTM', 'NEAR', 'APE', 'SAND', 'MANA',
+    'CRO', 'SHIB', 'TRX', 'ETC', 'XLM', 'VET', 'FIL', 'HBAR', 'ICP', 'AAVE',
+    'XMR', 'OP', 'ARB', 'INJ', 'SUI', 'APT', 'PEPE', 'WIF', 'BONK'
+  ];
+  
+  const upper = symbol.toUpperCase();
+  
+  // Check if it's a known crypto symbol
+  if (cryptoSymbols.includes(upper)) {
+    return 'crypto';
+  }
+  
+  // Check for USDT suffix (crypto pairs)
+  if (upper.endsWith('USDT') || upper.endsWith('USD') || upper.endsWith('BTC') || upper.endsWith('ETH')) {
+    return 'crypto';
+  }
+  
+  return 'stock';
 }
 
 // ==================== COLUMN DETECTION ====================
 
 interface ColumnMap {
   action: number | null;
-  ticker: number | null;  // Actual ticker symbol column
-  name: number | null;    // Company name column
+  ticker: number | null;
+  instrument: number | null;
   isin: number | null;
   quantity: number | null;
   price: number | null;
@@ -91,13 +192,13 @@ interface ColumnMap {
 }
 
 /**
- * Detect column indices by matching headers against known aliases
+ * Detect column indices from headers
  */
 function detectColumns(headers: string[]): ColumnMap {
   const columnMap: ColumnMap = {
     action: null,
     ticker: null,
-    name: null,
+    instrument: null,
     isin: null,
     quantity: null,
     price: null,
@@ -109,9 +210,13 @@ function detectColumns(headers: string[]): ColumnMap {
 
   const normalizedHeaders = headers.map(h => normalize(h));
 
+  // Match each field type against its aliases
   for (const [field, aliases] of Object.entries(COLUMN_ALIASES)) {
     for (let i = 0; i < normalizedHeaders.length; i++) {
       const header = normalizedHeaders[i];
+      
+      // Skip if already matched to a higher priority field
+      if (Object.values(columnMap).includes(i)) continue;
       
       // Exact match first
       if (aliases.includes(header)) {
@@ -119,7 +224,7 @@ function detectColumns(headers: string[]): ColumnMap {
         break;
       }
       
-      // Partial match (header contains alias or alias contains header)
+      // Partial match
       const partialMatch = aliases.find(alias => 
         header.includes(alias) || alias.includes(header)
       );
@@ -135,18 +240,17 @@ function detectColumns(headers: string[]): ColumnMap {
 // ==================== VALUE PARSING ====================
 
 /**
- * Parse a numeric value safely, handling different formats
+ * Parse numeric value with format handling
  */
 function parseNumber(value: string | undefined): number | null {
-  if (!value || value.trim() === '') return null;
+  if (!value || value.trim() === '' || value.trim() === '-') return null;
   
-  // Remove currency symbols, spaces, and handle different decimal separators
   let cleaned = value
-    .replace(/[$€£¥₹]/g, '')
+    .replace(/[$€£¥₹₿]/g, '')
     .replace(/\s/g, '')
     .trim();
   
-  // Handle European format (1.234,56) vs US format (1,234.56)
+  // Handle European format (1.234,56)
   const hasCommaDecimal = /\d,\d{1,2}$/.test(cleaned);
   if (hasCommaDecimal) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
@@ -164,28 +268,27 @@ function parseNumber(value: string | undefined): number | null {
 }
 
 /**
- * Parse a date value safely
+ * Parse date value
  */
 function parseDate(value: string | undefined): Date {
   if (!value || value.trim() === '') return new Date();
   
   const trimmed = value.trim();
   
-  // Try direct parsing
+  // Try ISO format first
   const parsed = new Date(trimmed);
   if (!isNaN(parsed.getTime())) return parsed;
   
-  // Try common formats
-  // DD/MM/YYYY or DD-MM-YYYY
-  const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  // Try DD/MM/YYYY or DD-MM-YYYY
+  const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
   if (dmyMatch) {
     const [, day, month, year] = dmyMatch;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     if (!isNaN(date.getTime())) return date;
   }
   
-  // YYYY-MM-DD
-  const ymdMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  // Try YYYY-MM-DD
+  const ymdMatch = trimmed.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
   if (ymdMatch) {
     const [, year, month, day] = ymdMatch;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
@@ -195,10 +298,27 @@ function parseDate(value: string | undefined): Date {
   return new Date();
 }
 
+/**
+ * Clean and validate a symbol
+ */
+function cleanSymbol(value: string | undefined): string {
+  if (!value) return '';
+  
+  let cleaned = value.trim().toUpperCase();
+  
+  // Remove common suffixes that aren't part of the symbol
+  cleaned = cleaned.replace(/\s*(INC\.?|CORP\.?|LTD\.?|PLC\.?|CO\.?|CLASS [A-Z])$/i, '');
+  
+  // Remove exchange prefixes
+  cleaned = cleaned.replace(/^(NYSE|NASDAQ|LSE|TSE|ASX):/i, '');
+  
+  return cleaned.trim();
+}
+
 // ==================== CSV PARSING ====================
 
 /**
- * Parse a CSV line, handling quoted values properly
+ * Parse a CSV line handling quotes properly
  */
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -211,7 +331,6 @@ function parseCSVLine(line: string): string[] {
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        // Escaped quote
         current += '"';
         i++;
       } else {
@@ -231,20 +350,22 @@ function parseCSVLine(line: string): string[] {
 
 // ==================== MAIN PARSER ====================
 
+export interface ImportDiagnostics {
+  totalRows: number;
+  tradesImported: number;
+  rowsSkipped: number;
+  skipReasons: Record<string, number>;
+  warnings: string[];
+}
+
 export interface ParseResult {
   trades: Trade[];
   errors: string[];
-  stats: {
-    totalRows: number;
-    tradesFound: number;
-    rowsSkipped: number;
-    skipReasons: Record<string, number>;
-  };
+  diagnostics: ImportDiagnostics;
 }
 
 /**
  * Parse a CSV file with flexible column detection
- * Works with Trading212, IBKR, and similar broker formats
  */
 export function parseFlexibleCSV(
   csvContent: string,
@@ -253,30 +374,65 @@ export function parseFlexibleCSV(
   const trades: Trade[] = [];
   const errors: string[] = [];
   const skipReasons: Record<string, number> = {};
+  const warnings: string[] = [];
   
   const addSkipReason = (reason: string) => {
     skipReasons[reason] = (skipReasons[reason] || 0) + 1;
   };
 
   try {
-    const lines = csvContent.split(/\r?\n/);
+    // Split into lines and filter empty
+    const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
+    
     if (lines.length < 2) {
       errors.push('CSV file is empty or has no data rows');
-      return { trades, errors, stats: { totalRows: 0, tradesFound: 0, rowsSkipped: 0, skipReasons } };
+      return {
+        trades,
+        errors,
+        diagnostics: {
+          totalRows: 0,
+          tradesImported: 0,
+          rowsSkipped: 0,
+          skipReasons,
+          warnings,
+        },
+      };
     }
 
     // Parse headers
     const headers = parseCSVLine(lines[0]);
     const columns = detectColumns(headers);
 
-    // Validate we have minimum required columns
-    if (columns.action === null && columns.ticker === null && columns.name === null) {
-      errors.push('Could not detect required columns (action or symbol/name). Headers found: ' + headers.join(', '));
-      return { trades, errors, stats: { totalRows: lines.length - 1, tradesFound: 0, rowsSkipped: lines.length - 1, skipReasons } };
+    // Log detected columns for debugging
+    console.log('Detected columns:', columns);
+    console.log('Headers:', headers);
+
+    // Check for minimum required columns
+    const hasSymbolColumn = columns.ticker !== null || columns.instrument !== null || columns.isin !== null;
+    const hasQuantityColumn = columns.quantity !== null;
+    
+    if (!hasSymbolColumn) {
+      errors.push('Could not detect symbol/ticker column. Headers: ' + headers.join(', '));
+      return {
+        trades,
+        errors,
+        diagnostics: {
+          totalRows: lines.length - 1,
+          tradesImported: 0,
+          rowsSkipped: lines.length - 1,
+          skipReasons,
+          warnings,
+        },
+      };
+    }
+
+    if (!hasQuantityColumn) {
+      warnings.push('Could not detect quantity column - will try to infer from data');
     }
 
     let dataRowCount = 0;
 
+    // Process each data row
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
@@ -286,13 +442,13 @@ export function parseFlexibleCSV(
       try {
         const values = parseCSVLine(line);
 
-        // Get action value
+        // Get action
         const actionValue = columns.action !== null ? values[columns.action] : '';
         const action = actionValue?.trim() || '';
 
-        // Skip if action is explicitly ignored
+        // Skip ignored actions
         if (action && isIgnoredAction(action)) {
-          addSkipReason(`Non-trade action: ${action}`);
+          addSkipReason(`Ignored: ${action.substring(0, 20)}`);
           continue;
         }
 
@@ -302,42 +458,38 @@ export function parseFlexibleCSV(
         if (action) {
           side = getTradeSide(action);
           if (!side && !isTradeAction(action)) {
-            addSkipReason(`Unrecognized action: ${action}`);
+            addSkipReason(`Unknown action: ${action.substring(0, 20)}`);
             continue;
           }
         }
 
-        // If no action column, try to infer from quantity sign or other indicators
+        // Infer from quantity sign if no action
         if (!side && columns.quantity !== null) {
           const qty = parseNumber(values[columns.quantity]);
-          if (qty !== null && qty < 0) {
-            side = 'sell';
-          } else if (qty !== null && qty > 0) {
-            side = 'buy';
+          if (qty !== null) {
+            side = qty < 0 ? 'sell' : 'buy';
           }
         }
 
-        // Skip if we can't determine trade side
         if (!side) {
           addSkipReason('Could not determine buy/sell');
           continue;
         }
 
-        // Get symbol - prioritize ticker column, then ISIN, then name as last resort
-        const ticker = columns.ticker !== null ? values[columns.ticker]?.trim().toUpperCase() : '';
-        const name = columns.name !== null ? values[columns.name]?.trim() : '';
+        // Get symbol - priority: ticker > instrument > isin
+        const ticker = columns.ticker !== null ? cleanSymbol(values[columns.ticker]) : '';
+        const instrument = columns.instrument !== null ? cleanSymbol(values[columns.instrument]) : '';
         const isin = columns.isin !== null ? values[columns.isin]?.trim().toUpperCase() : undefined;
 
-        // Use ticker if available, otherwise fall back to name or ISIN
-        const symbol = ticker || '';
+        // Use first available symbol
+        const symbol = ticker || instrument || isin || '';
 
-        // Must have ticker, name, or ISIN
-        if (!ticker && !name && !isin) {
-          addSkipReason('Missing symbol/ISIN');
+        if (!symbol) {
+          addSkipReason('Missing symbol');
           continue;
         }
 
-        // Get quantity (must be positive)
+        // Get quantity (absolute value)
         const rawQuantity = columns.quantity !== null ? parseNumber(values[columns.quantity]) : null;
         const quantity = rawQuantity !== null ? Math.abs(rawQuantity) : 0;
 
@@ -349,7 +501,7 @@ export function parseFlexibleCSV(
         // Get price
         let price = columns.price !== null ? parseNumber(values[columns.price]) : null;
         
-        // If no direct price, try to calculate from total / quantity
+        // Calculate from total if no direct price
         if ((price === null || price <= 0) && columns.total !== null) {
           const total = parseNumber(values[columns.total]);
           if (total !== null && quantity > 0) {
@@ -366,21 +518,26 @@ export function parseFlexibleCSV(
         const dateValue = columns.date !== null ? values[columns.date] : undefined;
         const date = parseDate(dateValue);
         
-        const currency = columns.currency !== null ? values[columns.currency]?.trim().toUpperCase() : undefined;
-        const fee = columns.fee !== null ? parseNumber(values[columns.fee]) || 0 : 0;
+        const currency = columns.currency !== null 
+          ? values[columns.currency]?.trim().toUpperCase() 
+          : undefined;
+          
+        const fee = columns.fee !== null 
+          ? Math.abs(parseNumber(values[columns.fee]) || 0) 
+          : 0;
 
-        // Create trade object - use ticker if available, else ISIN, else name
-        // The symbol should be the actual ticker for price lookup to work
-        const finalSymbol = ticker || isin || name.toUpperCase() || 'UNKNOWN';
-        
+        // Detect asset type
+        const assetType = detectAssetType(symbol);
+
+        // Create normalized trade
         const trade: Trade = {
-          id: `${source}_${Date.now()}_${i}`,
-          symbol: finalSymbol,
-          assetType: 'stock', // Default to stock, can be enhanced later
+          id: `${source}_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`,
+          symbol,
+          assetType,
           side,
-          quantity, // Full precision preserved
-          price,    // Full precision preserved
-          fee: Math.abs(fee),
+          quantity,
+          price,
+          fee,
           date,
           source,
         };
@@ -392,42 +549,53 @@ export function parseFlexibleCSV(
       }
     }
 
-    // Generate summary of skip reasons
-    const skipSummary = Object.entries(skipReasons)
-      .map(([reason, count]) => `${reason}: ${count}`)
-      .join(', ');
-    
-    if (skipSummary) {
-      errors.push(`Skipped rows - ${skipSummary}`);
+    // Add warning if no trades found
+    if (trades.length === 0 && dataRowCount > 0) {
+      warnings.push(`0 trades detected from ${dataRowCount} rows. Check if the CSV format is supported.`);
     }
+
+    // Log summary
+    console.log(`Import complete: ${trades.length} trades from ${dataRowCount} rows`);
+    Object.entries(skipReasons).forEach(([reason, count]) => {
+      console.log(`  Skipped: ${reason} (${count})`);
+    });
 
     return {
       trades,
       errors,
-      stats: {
+      diagnostics: {
         totalRows: dataRowCount,
-        tradesFound: trades.length,
+        tradesImported: trades.length,
         rowsSkipped: dataRowCount - trades.length,
         skipReasons,
+        warnings,
       },
     };
   } catch (e) {
-    errors.push('Failed to parse CSV file: ' + (e instanceof Error ? e.message : 'Unknown error'));
-    return { trades, errors, stats: { totalRows: 0, tradesFound: 0, rowsSkipped: 0, skipReasons } };
+    errors.push('Failed to parse CSV: ' + (e instanceof Error ? e.message : 'Unknown error'));
+    return {
+      trades,
+      errors,
+      diagnostics: {
+        totalRows: 0,
+        tradesImported: 0,
+        rowsSkipped: 0,
+        skipReasons,
+        warnings,
+      },
+    };
   }
 }
 
-// ==================== LEGACY COMPATIBILITY ====================
+// ==================== LEGACY EXPORTS ====================
 
-// Re-export for backward compatibility with existing code
 export { parseFlexibleCSV as parseTrading212CSV };
 
 /**
- * Parse IBKR CSV export (uses flexible parser with IBKR source)
+ * Parse IBKR CSV export
  */
-export function parseIBKRCSV(csvContent: string): { trades: Trade[]; errors: string[] } {
-  // IBKR has a special format with section headers
-  // Try to extract just the trades section
+export function parseIBKRCSV(csvContent: string): ParseResult {
+  // IBKR has section headers - try to extract trades section
   const lines = csvContent.split(/\r?\n/);
   let tradesSection = '';
   let isTradesSection = false;
@@ -437,7 +605,6 @@ export function parseIBKRCSV(csvContent: string): { trades: Trade[]; errors: str
     if (line.startsWith('Trades,Header')) {
       isTradesSection = true;
       foundTradesHeader = true;
-      // Extract headers
       tradesSection = line.replace('Trades,Header,', '') + '\n';
       continue;
     }
@@ -446,27 +613,25 @@ export function parseIBKRCSV(csvContent: string): { trades: Trade[]; errors: str
       if (line.startsWith('Trades,Data')) {
         tradesSection += line.replace('Trades,Data,', '') + '\n';
       } else if (line.startsWith('Trades,Total') || line.startsWith('Trades,SubTotal')) {
-        // Skip total rows
         continue;
       } else if (line.trim() === '' || line.startsWith(',')) {
-        // End of trades section
         break;
       }
     }
   }
 
   if (foundTradesHeader && tradesSection) {
-    const result = parseFlexibleCSV(tradesSection, 'ibkr');
-    return { trades: result.trades, errors: result.errors };
+    return parseFlexibleCSV(tradesSection, 'ibkr');
   }
 
-  // Fallback: try parsing the whole file
-  const result = parseFlexibleCSV(csvContent, 'ibkr');
-  return { trades: result.trades, errors: result.errors };
+  return parseFlexibleCSV(csvContent, 'ibkr');
 }
 
 // ==================== DUPLICATE DETECTION ====================
 
+/**
+ * Find duplicate trades between new and existing
+ */
 export function findDuplicates(newTrades: Trade[], existingTrades: Trade[]): Trade[] {
   return newTrades.filter(newTrade => {
     return existingTrades.some(existing => 
@@ -474,7 +639,7 @@ export function findDuplicates(newTrades: Trade[], existingTrades: Trade[]): Tra
       existing.side === newTrade.side &&
       Math.abs(existing.quantity - newTrade.quantity) < 0.0001 &&
       Math.abs(existing.price - newTrade.price) < 0.01 &&
-      Math.abs(existing.date.getTime() - newTrade.date.getTime()) < 60000 // Within 1 minute
+      Math.abs(existing.date.getTime() - newTrade.date.getTime()) < 60000
     );
   });
 }
@@ -485,6 +650,9 @@ export interface ImportResult {
   errors: string[];
 }
 
+/**
+ * Import trades with duplicate detection
+ */
 export function importTrades(
   newTrades: Trade[],
   existingTrades: Trade[]
