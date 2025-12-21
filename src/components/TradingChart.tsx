@@ -1,15 +1,18 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import { Settings2, ChevronDown, TrendingUp } from 'lucide-react';
-import { Holding } from '@/types/portfolio';
+import { Settings2, ChevronDown, TrendingUp, RefreshCw } from 'lucide-react';
+import { Holding, Trade } from '@/types/portfolio';
 import { calculatePortfolioTotals, formatCurrency } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
 
 interface TradingChartProps {
   holdings: Holding[];
+  trades?: Trade[];
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 type TimeRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'All';
@@ -17,10 +20,16 @@ type BaselineType = 'Previous Close' | 'Average';
 
 const TIME_RANGES: TimeRange[] = ['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'All'];
 
-// Generate historical data based on range
-function generateChartData(currentValue: number, range: TimeRange) {
+interface ChartDataPoint {
+  time: number;
+  value: number;
+  label: string;
+}
+
+// Generate mock historical data based on range and current value
+function generateMockChartData(currentValue: number, range: TimeRange): ChartDataPoint[] {
   const now = Date.now();
-  const data = [];
+  const data: ChartDataPoint[] = [];
   
   let points: number;
   let interval: number;
@@ -28,7 +37,7 @@ function generateChartData(currentValue: number, range: TimeRange) {
   
   switch (range) {
     case '1D':
-      points = 78; // Every 5 minutes for 6.5 hours
+      points = 78;
       interval = 5 * 60 * 1000;
       variation = 0.02;
       break;
@@ -74,7 +83,6 @@ function generateChartData(currentValue: number, range: TimeRange) {
       variation = 0.02;
   }
   
-  // Start with some variance from current value
   const startMultiplier = 1 - variation + Math.random() * variation;
   let value = currentValue * startMultiplier;
   
@@ -91,7 +99,9 @@ function generateChartData(currentValue: number, range: TimeRange) {
   }
   
   // Ensure last value matches current
-  data[data.length - 1].value = currentValue;
+  if (data.length > 0) {
+    data[data.length - 1].value = currentValue;
+  }
   
   return data;
 }
@@ -117,18 +127,21 @@ function formatTimeLabel(timestamp: number, range: TimeRange): string {
   }
 }
 
-export function TradingChart({ holdings }: TradingChartProps) {
+export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('1D');
   const [baselineType, setBaselineType] = useState<BaselineType>('Previous Close');
   const [showKeyEvents, setShowKeyEvents] = useState(false);
+  const [chartKey, setChartKey] = useState(0);
   
-  const { totalValue } = calculatePortfolioTotals(holdings);
+  const { totalValue, totalPL, totalPLPercent } = calculatePortfolioTotals(holdings);
   
+  // Regenerate chart data when range or holdings change
   const chartData = useMemo(() => {
-    return generateChartData(totalValue, timeRange);
-  }, [totalValue, timeRange]);
+    return generateMockChartData(totalValue, timeRange);
+  }, [totalValue, timeRange, chartKey]);
   
   const baseline = useMemo(() => {
+    if (chartData.length === 0) return totalValue;
     if (baselineType === 'Previous Close') {
       return chartData[0]?.value || totalValue;
     }
@@ -139,21 +152,33 @@ export function TradingChart({ holdings }: TradingChartProps) {
   const currentPrice = totalValue;
   const priceChange = currentPrice - baseline;
   const priceChangePercent = baseline > 0 ? (priceChange / baseline) * 100 : 0;
-  const isPositive = priceChange >= 0;
   
-  const minValue = Math.min(...chartData.map(d => d.value), baseline);
-  const maxValue = Math.max(...chartData.map(d => d.value), baseline);
-  const padding = (maxValue - minValue) * 0.15;
+  // Determine if performance is positive (GREEN) or negative (RED)
+  const isPositive = totalPL >= 0;
+  
+  const minValue = chartData.length > 0 
+    ? Math.min(...chartData.map(d => d.value), baseline)
+    : 0;
+  const maxValue = chartData.length > 0 
+    ? Math.max(...chartData.map(d => d.value), baseline)
+    : totalValue;
+  const padding = (maxValue - minValue) * 0.15 || totalValue * 0.1;
 
-  // Split data for coloring above/below baseline
-  const processedData = useMemo(() => {
-    return chartData.map(point => ({
-      ...point,
-      aboveBaseline: point.value >= baseline ? point.value : baseline,
-      belowBaseline: point.value < baseline ? point.value : baseline,
-      valueForLine: point.value,
-    }));
-  }, [chartData, baseline]);
+  const handleRefresh = () => {
+    setChartKey(prev => prev + 1);
+    onRefresh?.();
+  };
+
+  // No data state
+  if (holdings.length === 0) {
+    return (
+      <div className="trading-chart-container">
+        <div className="flex items-center justify-center h-64 text-muted-foreground">
+          <p>Import trades to see portfolio chart</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="trading-chart-container">
@@ -179,6 +204,17 @@ export function TradingChart({ holdings }: TradingChartProps) {
         
         {/* Right Controls */}
         <div className="flex items-center gap-2">
+          {/* Refresh Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-chart-muted hover:text-chart-foreground"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+          </Button>
+          
           {/* Key Events Toggle */}
           <div className="hidden sm:flex items-center gap-2">
             <span className="text-xs text-chart-muted">Key Events</span>
@@ -219,9 +255,9 @@ export function TradingChart({ holdings }: TradingChartProps) {
         </div>
       </div>
       
-      {/* Price Header */}
+      {/* Price Header - Uses GREEN for profit, RED for loss */}
       <div className="mb-4">
-        <div className="flex items-baseline gap-3">
+        <div className="flex items-baseline gap-3 flex-wrap">
           <span className="text-2xl font-semibold text-chart-foreground">
             {formatCurrency(currentPrice)}
           </span>
@@ -231,31 +267,35 @@ export function TradingChart({ holdings }: TradingChartProps) {
               ? "bg-chart-profit/10 text-chart-profit" 
               : "bg-chart-loss/10 text-chart-loss"
           )}>
-            <span>{isPositive ? '+' : ''}{formatCurrency(priceChange)}</span>
-            <span>({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)</span>
+            <span>{isPositive ? '+' : ''}{formatCurrency(totalPL)}</span>
+            <span>({isPositive ? '+' : ''}{totalPLPercent.toFixed(2)}%)</span>
           </div>
         </div>
+        <p className="text-xs text-chart-muted mt-1">
+          Total P/L from invested amount
+        </p>
       </div>
       
-      {/* Main Chart */}
+      {/* Main Chart - Line and fill color based on performance */}
       <div className="h-64 sm:h-72 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart 
-            data={processedData}
+            data={chartData}
             margin={{ top: 8, right: 60, left: 0, bottom: 0 }}
           >
             <defs>
+              {/* Green gradient for positive performance */}
               <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.2} />
+                <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.25} />
                 <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
               </linearGradient>
+              {/* Red gradient for negative performance */}
               <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
-                <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.2} />
+                <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
               </linearGradient>
             </defs>
             
-            {/* Dotted Grid */}
             <XAxis 
               dataKey="label" 
               axisLine={false}
@@ -308,10 +348,10 @@ export function TradingChart({ holdings }: TradingChartProps) {
               cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
             />
             
-            {/* Area fills */}
+            {/* Area fill - GREEN for positive, RED for negative */}
             <Area
               type="monotone"
-              dataKey="valueForLine"
+              dataKey="value"
               stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
               strokeWidth={2}
               fill={isPositive ? 'url(#profitGradient)' : 'url(#lossGradient)'}
@@ -321,7 +361,7 @@ export function TradingChart({ holdings }: TradingChartProps) {
           </AreaChart>
         </ResponsiveContainer>
         
-        {/* Current Price Badge */}
+        {/* Current Price Badge - GREEN or RED */}
         <div 
           className={cn(
             "absolute right-0 px-2 py-1 rounded text-xs font-medium",
@@ -338,9 +378,17 @@ export function TradingChart({ holdings }: TradingChartProps) {
         </div>
       </div>
       
-      {/* Volume Section */}
-      <div className="mt-4 pt-4 border-t border-chart-border">
-        <p className="text-xs text-chart-muted text-center">Volume Not Available</p>
+      {/* Footer */}
+      <div className="mt-4 pt-4 border-t border-chart-border flex items-center justify-between">
+        <p className="text-xs text-chart-muted">
+          {isLoading ? 'Updating prices...' : 'Live prices'}
+        </p>
+        {isLoading && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-chart-profit animate-pulse" />
+            <span className="text-xs text-chart-muted">Syncing</span>
+          </div>
+        )}
       </div>
     </div>
   );
