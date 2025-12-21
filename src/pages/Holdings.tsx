@@ -225,7 +225,11 @@ export default function Holdings() {
         {/* Chart and Summary - contained */}
         <div className="container mx-auto px-4 py-6 space-y-6">
           {/* Trading Chart */}
-          <TradingChart holdings={holdings} />
+          <TradingChart 
+            holdings={holdings} 
+            trades={trades}
+            isLoading={isLoading}
+          />
           
           {/* Live Indicator */}
           {lastUpdate && (

@@ -2,20 +2,21 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { Holding } from '@/types/portfolio';
 import { calculatePortfolioTotals, formatCurrency } from '@/lib/calculations';
+import { cn } from '@/lib/utils';
 
 interface PortfolioChartProps {
   holdings: Holding[];
 }
 
 // Generate mock historical data based on current value
-function generateHistoricalData(currentValue: number) {
+function generateHistoricalData(currentValue: number, totalPL: number) {
   const now = Date.now();
   const data = [];
-  const baseValue = currentValue * 0.85; // Start at 85% of current
+  const baseValue = currentValue - totalPL; // Start from invested amount
   
   for (let i = 24; i >= 0; i--) {
     const time = now - i * 3600000; // hourly data
-    const variation = Math.random() * 0.08 - 0.02; // -2% to +6%
+    const variation = Math.random() * 0.04 - 0.01; // -1% to +3%
     const progress = (24 - i) / 24;
     const value = baseValue + (currentValue - baseValue) * progress + currentValue * variation;
     
@@ -33,15 +34,20 @@ function generateHistoricalData(currentValue: number) {
 }
 
 export function PortfolioChart({ holdings }: PortfolioChartProps) {
-  const { totalValue } = calculatePortfolioTotals(holdings);
+  const { totalValue, totalPL } = calculatePortfolioTotals(holdings);
   
   const chartData = useMemo(() => {
-    return generateHistoricalData(totalValue);
-  }, [totalValue]);
+    return generateHistoricalData(totalValue, totalPL);
+  }, [totalValue, totalPL]);
 
   const minValue = Math.min(...chartData.map(d => d.value));
   const maxValue = Math.max(...chartData.map(d => d.value));
   const padding = (maxValue - minValue) * 0.1;
+
+  // Determine color based on P/L performance
+  const isPositive = totalPL >= 0;
+  const strokeColor = isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))';
+  const gradientId = isPositive ? 'portfolioGradientProfit' : 'portfolioGradientLoss';
 
   return (
     <div className="h-40 w-full">
@@ -51,9 +57,13 @@ export function PortfolioChart({ holdings }: PortfolioChartProps) {
           margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
         >
           <defs>
-            <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+            <linearGradient id="portfolioGradientProfit" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="portfolioGradientLoss" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
             </linearGradient>
           </defs>
           <XAxis 
@@ -80,9 +90,9 @@ export function PortfolioChart({ holdings }: PortfolioChartProps) {
           <Area
             type="monotone"
             dataKey="value"
-            stroke="hsl(var(--primary))"
+            stroke={strokeColor}
             strokeWidth={2}
-            fill="url(#portfolioGradient)"
+            fill={`url(#${gradientId})`}
             animationDuration={800}
             animationEasing="ease-out"
           />
