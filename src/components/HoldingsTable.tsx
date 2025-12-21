@@ -346,10 +346,10 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                 
                 {/* Name & ISIN */}
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-primary text-sm truncate leading-tight hover:underline">
+                  <p className="font-medium text-[#2563eb] text-sm truncate leading-tight hover:underline">
                     {holding.name}
                   </p>
-                  <p className="text-[10px] text-muted-foreground truncate">
+                  <p className="text-[10px] text-[#6b7280] truncate">
                     {holding.assetType === 'stock' ? holding.isin : holding.symbol}
                   </p>
                 </div>
@@ -358,25 +358,25 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
             {/* Position / Holding Period */}
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
-              <p className="font-semibold text-sm">{formatQuantity(holding.quantity)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {holding.holdingPeriodDays}d
+              <p className="font-semibold text-sm text-foreground">{formatQuantity(holding.quantity)}</p>
+              <p className="text-[10px] text-[#6b7280]">
+                {holding.holdingPeriodDays} days
               </p>
             </div>
 
             {/* Cumulative Cashflow */}
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
-              <p className="font-semibold text-sm">{formatCurrency(holding.investedAmount)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {formatCurrency(holding.averageBuyPrice)}/sh
+              <p className="font-semibold text-sm text-foreground">{formatCurrency(holding.investedAmount)}</p>
+              <p className="text-[10px] text-[#6b7280]">
+                {formatCurrency(holding.averageBuyPrice)}/share
               </p>
             </div>
 
             {/* Value Per Share */}
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
-              <p className="font-semibold text-sm">{formatCurrency(holding.currentValue)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {formatCurrency(holding.currentPrice)}/sh
+              <p className="font-semibold text-sm text-foreground">{formatCurrency(holding.currentValue)}</p>
+              <p className="text-[10px] text-[#6b7280]">
+                {formatCurrency(holding.currentPrice)}/share
               </p>
             </div>
 
@@ -384,22 +384,22 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
               <p className={cn(
                 "font-semibold text-sm",
-                holding.unrealizedPL >= 0 ? "text-success" : "text-destructive"
+                holding.unrealizedPL >= 0 ? "text-[#16a34a]" : "text-[#dc2626]"
               )}>
-                {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
+                {holding.unrealizedPL >= 0 ? '' : '-'}${Math.abs(holding.unrealizedPL).toFixed(2)}
               </p>
               <p className={cn(
                 "text-[10px] font-medium",
-                holding.unrealizedPLPercent >= 0 ? "text-success" : "text-destructive"
+                holding.unrealizedPLPercent >= 0 ? "text-[#16a34a]" : "text-[#dc2626]"
               )}>
-                {holding.unrealizedPLPercent >= 0 ? '+' : ''}{formatPercent(holding.unrealizedPLPercent)}
+                {holding.unrealizedPLPercent >= 0 ? '' : '-'}{Math.abs(holding.unrealizedPLPercent).toFixed(2)}%
               </p>
             </div>
 
             {/* Allocation */}
             <div className="py-2.5 px-2 text-center flex items-center justify-center">
-              <p className="font-medium text-sm text-muted-foreground">
-                {formatPercent(holding.allocationPercent)}
+              <p className="font-medium text-sm text-foreground">
+                {holding.allocationPercent.toFixed(2)}%
               </p>
             </div>
           </div>
