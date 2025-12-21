@@ -346,10 +346,10 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                 
                 {/* Name & ISIN */}
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-[#2563eb] text-sm truncate leading-tight hover:underline">
+                  <p className="font-medium text-primary text-sm truncate leading-tight hover:underline">
                     {holding.name}
                   </p>
-                  <p className="text-[10px] text-[#6b7280] truncate">
+                  <p className="text-[10px] text-muted-foreground truncate">
                     {holding.assetType === 'stock' ? holding.isin : holding.symbol}
                   </p>
                 </div>
@@ -359,7 +359,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             {/* Position / Holding Period */}
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
               <p className="font-semibold text-sm text-foreground">{formatQuantity(holding.quantity)}</p>
-              <p className="text-[10px] text-[#6b7280]">
+              <p className="text-[10px] text-muted-foreground">
                 {holding.holdingPeriodDays} days
               </p>
             </div>
@@ -367,7 +367,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             {/* Cumulative Cashflow */}
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
               <p className="font-semibold text-sm text-foreground">{formatCurrency(holding.investedAmount)}</p>
-              <p className="text-[10px] text-[#6b7280]">
+              <p className="text-[10px] text-muted-foreground">
                 {formatCurrency(holding.averageBuyPrice)}/share
               </p>
             </div>
@@ -375,7 +375,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             {/* Value Per Share */}
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
               <p className="font-semibold text-sm text-foreground">{formatCurrency(holding.currentValue)}</p>
-              <p className="text-[10px] text-[#6b7280]">
+              <p className="text-[10px] text-muted-foreground">
                 {formatCurrency(holding.currentPrice)}/share
               </p>
             </div>
@@ -384,15 +384,15 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
               <p className={cn(
                 "font-semibold text-sm",
-                holding.unrealizedPL >= 0 ? "text-[#16a34a]" : "text-[#dc2626]"
+                holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
               )}>
-                {holding.unrealizedPL >= 0 ? '' : '-'}${Math.abs(holding.unrealizedPL).toFixed(2)}
+                {holding.unrealizedPL >= 0 ? '+' : '-'}${Math.abs(holding.unrealizedPL).toFixed(2)}
               </p>
               <p className={cn(
                 "text-[10px] font-medium",
-                holding.unrealizedPLPercent >= 0 ? "text-[#16a34a]" : "text-[#dc2626]"
+                holding.unrealizedPLPercent >= 0 ? "text-profit" : "text-loss"
               )}>
-                {holding.unrealizedPLPercent >= 0 ? '' : '-'}{Math.abs(holding.unrealizedPLPercent).toFixed(2)}%
+                {holding.unrealizedPLPercent >= 0 ? '+' : '-'}{Math.abs(holding.unrealizedPLPercent).toFixed(2)}%
               </p>
             </div>
 

@@ -7,12 +7,12 @@ import { TradingChart } from '@/components/TradingChart';
 import { ImportSettingsSheet } from '@/components/ImportSettingsSheet';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
-import { AssetType, Trade, LivePrice } from '@/types/portfolio';
+import { AssetType, Trade, LivePrice, TradeSource } from '@/types/portfolio';
 import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
-import { fetchTrades, addTrades, deleteTradesBySymbol } from '@/services/firestoreService';
+import { fetchTrades, addTrades, deleteTradesBySymbol, deleteTradesBySource } from '@/services/localDbService';
 
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -28,18 +28,18 @@ export default function Holdings() {
   const { toast } = useToast();
   const refreshCleanupRef = useRef<(() => void) | null>(null);
 
-  // Load trades from Firestore on mount
+  // Load trades from IndexedDB on mount
   useEffect(() => {
     const loadTrades = async () => {
       try {
-        const firestoreTrades = await fetchTrades();
-        setTrades(firestoreTrades);
-        console.log('Loaded trades from Firestore:', firestoreTrades.length);
+        const localTrades = await fetchTrades();
+        setTrades(localTrades);
+        console.log('Loaded trades from IndexedDB:', localTrades.length);
       } catch (error) {
-        console.error('Error loading trades from Firestore:', error);
+        console.error('Error loading trades from IndexedDB:', error);
         toast({
-          title: "Database connection",
-          description: "Could not load trades. Check Firestore rules.",
+          title: "Database error",
+          description: "Could not load trades from local storage.",
           variant: "destructive",
         });
       } finally {
@@ -120,20 +120,29 @@ export default function Holdings() {
     return calculateHoldings(trades, prices, assetType, globalPortfolioTotal);
   }, [trades, prices, assetType, globalPortfolioTotal]);
 
-  // Handle trade imports
-  const handleImport = async (newTrades: Trade[]) => {
+  // Handle trade imports - with source replacement (no merging)
+  const handleImport = async (newTrades: Trade[], source?: TradeSource) => {
     try {
+      // If source is provided, delete ALL existing trades from that source first
+      if (source) {
+        await deleteTradesBySource(source);
+        // Update local state to remove those trades
+        setTrades(prev => prev.filter(t => t.source !== source));
+      }
+      
+      // Add new trades
       await addTrades(newTrades);
-      setTrades(prev => [...prev, ...newTrades]);
+      setTrades(prev => [...prev.filter(t => source ? t.source !== source : true), ...newTrades]);
+      
       toast({
         title: "Trades imported",
-        description: `${newTrades.length} trades saved to database.`,
+        description: `${newTrades.length} trades saved locally.`,
       });
     } catch (error) {
       console.error('Error saving trades:', error);
       toast({
         title: "Save failed",
-        description: "Could not save trades to database. Check Firestore rules.",
+        description: "Could not save trades to local storage.",
         variant: "destructive",
       });
     }
@@ -146,13 +155,13 @@ export default function Holdings() {
       setTrades(prev => prev.filter(t => !symbols.includes(t.symbol)));
       toast({
         title: "Holdings deleted",
-        description: `${symbols.length} holding(s) removed from database.`,
+        description: `${symbols.length} holding(s) removed.`,
       });
     } catch (error) {
       console.error('Error deleting holdings:', error);
       toast({
         title: "Delete failed",
-        description: "Could not delete holdings from database.",
+        description: "Could not delete holdings.",
         variant: "destructive",
       });
     }
@@ -236,7 +245,7 @@ export default function Holdings() {
         <div className="w-full px-4 lg:px-6 xl:px-8 pb-6">
           <HoldingsTable 
             holdings={holdings} 
-            isLoading={isLoading}
+            isLoading={isLoading || dbLoading}
             onDeleteHoldings={handleDeleteHoldings}
           />
         </div>

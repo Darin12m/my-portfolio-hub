@@ -8,9 +8,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { parseTrading212CSV, parseIBKRCSV, importTrades } from '@/services/importService';
-import { Trade, ImportResult } from '@/types/portfolio';
+import { Upload, FileText, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { parseTrading212CSV, parseIBKRCSV } from '@/services/importService';
+import { Trade, TradeSource } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
 
 type ImportSource = 'trading212' | 'ibkr';
@@ -18,7 +18,7 @@ type ImportSource = 'trading212' | 'ibkr';
 interface ImportModalProps {
   source: ImportSource;
   existingTrades: Trade[];
-  onImport: (trades: Trade[]) => void;
+  onImport: (trades: Trade[], source: TradeSource) => void;
   fullWidth?: boolean;
 }
 
@@ -28,19 +28,19 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
   const [file, setFile] = useState<File | null>(null);
   const [parsedTrades, setParsedTrades] = useState<Trade[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'result'>('upload');
+  const [importedCount, setImportedCount] = useState(0);
 
   const sourceConfig = {
     trading212: {
       name: 'Trading212',
-      description: 'Import your trades from Trading212 CSV export',
+      description: 'Import your trades from Trading212 CSV export. This will REPLACE all existing Trading212 trades.',
       parser: parseTrading212CSV,
     },
     ibkr: {
       name: 'Interactive Brokers',
-      description: 'Import your trades from IBKR Flex Query CSV export',
+      description: 'Import your trades from IBKR Flex Query CSV export. This will REPLACE all existing IBKR trades.',
       parser: parseIBKRCSV,
     },
   };
@@ -91,26 +91,10 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
   };
 
   const handleImport = () => {
-    const result = importTrades(parsedTrades, existingTrades);
-    setImportResult(result);
-
-    // Filter out duplicates and pass unique trades
-    const duplicates = new Set(
-      parsedTrades
-        .filter(newTrade => 
-          existingTrades.some(existing => 
-            existing.symbol === newTrade.symbol &&
-            existing.side === newTrade.side &&
-            existing.quantity === newTrade.quantity &&
-            existing.price === newTrade.price
-          )
-        )
-        .map(t => t.id)
-    );
-    
-    const uniqueTrades = parsedTrades.filter(t => !duplicates.has(t.id));
-    onImport(uniqueTrades);
-    
+    // Pass ALL parsed trades and the source - no duplicate checking here
+    // The parent will delete all existing trades from this source first
+    setImportedCount(parsedTrades.length);
+    onImport(parsedTrades, source);
     setStep('result');
   };
 
@@ -118,7 +102,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
     setFile(null);
     setParsedTrades([]);
     setParseErrors([]);
-    setImportResult(null);
+    setImportedCount(0);
     setStep('upload');
   };
 
@@ -126,6 +110,9 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
     setIsOpen(false);
     setTimeout(resetModal, 200);
   };
+
+  // Count existing trades from this source
+  const existingSourceTradeCount = existingTrades.filter(t => t.source === source).length;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -191,9 +178,19 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                 <span className="text-sm font-medium">Trades found</span>
                 <span className="text-sm text-primary font-semibold">{parsedTrades.length}</span>
               </div>
+              
+              {existingSourceTradeCount > 0 && (
+                <div className="flex items-start gap-2 mt-3 p-2 rounded bg-amber-500/10 border border-amber-500/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    {existingSourceTradeCount} existing {config.name} trades will be replaced
+                  </p>
+                </div>
+              )}
+              
               {parseErrors.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-xs text-loss mb-1">Errors ({parseErrors.length})</p>
+                  <p className="text-xs text-muted-foreground mb-1">Notes ({parseErrors.length})</p>
                   <ul className="text-xs text-muted-foreground space-y-0.5 max-h-20 overflow-y-auto">
                     {parseErrors.slice(0, 5).map((error, i) => (
                       <li key={i}>{error}</li>
@@ -217,26 +214,16 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
           </div>
         )}
 
-        {step === 'result' && importResult && (
+        {step === 'result' && (
           <div className="space-y-4">
             <div className="rounded-lg border border-border bg-secondary/30 p-6 text-center">
-              {importResult.tradesAdded > 0 ? (
-                <CheckCircle2 className="h-12 w-12 mx-auto text-profit mb-3" />
-              ) : (
-                <XCircle className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              )}
+              <CheckCircle2 className="h-12 w-12 mx-auto text-profit mb-3" />
               
               <h3 className="font-semibold mb-4">Import Complete</h3>
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="rounded-lg bg-secondary p-3">
-                  <p className="text-2xl font-bold text-profit">{importResult.tradesAdded}</p>
-                  <p className="text-muted-foreground">Trades added</p>
-                </div>
-                <div className="rounded-lg bg-secondary p-3">
-                  <p className="text-2xl font-bold text-muted-foreground">{importResult.tradesSkipped}</p>
-                  <p className="text-muted-foreground">Duplicates skipped</p>
-                </div>
+              <div className="rounded-lg bg-secondary p-3">
+                <p className="text-2xl font-bold text-profit">{importedCount}</p>
+                <p className="text-muted-foreground">Trades imported</p>
               </div>
             </div>
 

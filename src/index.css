@@ -53,20 +53,20 @@
     
     --allocation-bar: 217 80% 60%;
     
-    /* Trading Chart - Dark institutional style */
-    --chart-bg: 222 47% 8%;
-    --chart-surface: 222 40% 12%;
+    /* Trading Chart - Theme-aware (LIGHT) */
+    --chart-bg: 210 20% 96%;
+    --chart-surface: 210 20% 93%;
     --chart-active: 217 91% 55%;
     --chart-active-foreground: 0 0% 100%;
-    --chart-foreground: 210 40% 98%;
-    --chart-muted: 215 20% 50%;
-    --chart-border: 222 30% 20%;
-    --chart-baseline: 215 20% 40%;
-    --chart-cursor: 215 20% 60%;
-    --chart-popover: 222 47% 11%;
-    --chart-profit: 142 76% 45%;
+    --chart-foreground: 222 47% 11%;
+    --chart-muted: 215 16% 47%;
+    --chart-border: 214 20% 88%;
+    --chart-baseline: 215 16% 60%;
+    --chart-cursor: 215 16% 40%;
+    --chart-popover: 0 0% 100%;
+    --chart-profit: 142 76% 36%;
     --chart-loss: 0 84% 55%;
-    --chart-grid: 222 30% 18%;
+    --chart-grid: 214 20% 92%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
@@ -120,7 +120,7 @@
     
     --allocation-bar: 217 50% 45%;
     
-    /* Trading Chart - Dark institutional style (same in dark mode) */
+    /* Trading Chart - Theme-aware (DARK) */
     --chart-bg: 222 47% 8%;
     --chart-surface: 222 40% 12%;
     --chart-active: 217 91% 60%;
@@ -271,9 +271,11 @@
     background-color: rgba(59, 130, 246, 0.25);
   }
   
-  /* Trading chart container - always dark */
+  /* Trading chart container - theme-aware */
   .trading-chart-container {
-    @apply bg-chart-bg rounded-2xl p-4 border border-chart-border;
+    @apply rounded-2xl p-4 border;
+    background-color: hsl(var(--chart-bg));
+    border-color: hsl(var(--chart-border));
     background-image: 
       radial-gradient(circle, hsl(var(--chart-grid)) 1px, transparent 1px);
     background-size: 20px 20px;
