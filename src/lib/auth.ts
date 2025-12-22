@@ -1,51 +1,119 @@
-import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged, 
+  User 
+} from 'firebase/auth';
 import { auth } from './firebase';
 
 let currentUser: User | null = null;
 let authInitialized = false;
-let authPromise: Promise<User> | null = null;
+let authInitPromise: Promise<User | null> | null = null;
 
 /**
- * Ensure user is authenticated (anonymous sign-in if needed)
- * Returns the user ID
+ * Wait for auth to initialize and return current user
  */
-export async function ensureAuth(): Promise<string> {
-  // If we already have a user, return immediately
-  if (currentUser) {
-    return currentUser.uid;
+export async function waitForAuth(): Promise<User | null> {
+  if (authInitialized) {
+    return currentUser;
   }
 
-  // If auth is already being initialized, wait for it
-  if (authPromise) {
-    const user = await authPromise;
-    return user.uid;
+  if (authInitPromise) {
+    return authInitPromise;
   }
 
-  // Start auth initialization
-  authPromise = new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  authInitPromise = new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       unsubscribe();
-      
-      if (user) {
-        currentUser = user;
-        authInitialized = true;
-        resolve(user);
-      } else {
-        // No user, sign in anonymously
-        try {
-          const result = await signInAnonymously(auth);
-          currentUser = result.user;
-          authInitialized = true;
-          resolve(result.user);
-        } catch (error) {
-          reject(error);
-        }
-      }
+      currentUser = user;
+      authInitialized = true;
+      resolve(user);
     });
   });
 
-  const user = await authPromise;
-  return user.uid;
+  return authInitPromise;
+}
+
+/**
+ * Sign in with email and password
+ */
+export async function signIn(email: string, password: string): Promise<{ error: string | null }> {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    currentUser = result.user;
+    return { error: null };
+  } catch (error: any) {
+    let message = 'Failed to sign in';
+    
+    switch (error.code) {
+      case 'auth/invalid-email':
+        message = 'Invalid email address';
+        break;
+      case 'auth/user-disabled':
+        message = 'This account has been disabled';
+        break;
+      case 'auth/user-not-found':
+        message = 'No account found with this email';
+        break;
+      case 'auth/wrong-password':
+        message = 'Incorrect password';
+        break;
+      case 'auth/invalid-credential':
+        message = 'Invalid email or password';
+        break;
+      case 'auth/too-many-requests':
+        message = 'Too many failed attempts. Please try again later';
+        break;
+    }
+    
+    return { error: message };
+  }
+}
+
+/**
+ * Sign up with email and password
+ */
+export async function signUp(email: string, password: string): Promise<{ error: string | null }> {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    currentUser = result.user;
+    return { error: null };
+  } catch (error: any) {
+    let message = 'Failed to create account';
+    
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        message = 'An account with this email already exists';
+        break;
+      case 'auth/invalid-email':
+        message = 'Invalid email address';
+        break;
+      case 'auth/weak-password':
+        message = 'Password should be at least 6 characters';
+        break;
+      case 'auth/operation-not-allowed':
+        message = 'Email/password sign up is not enabled';
+        break;
+    }
+    
+    return { error: message };
+  }
+}
+
+/**
+ * Sign out current user
+ */
+export async function signOut(): Promise<void> {
+  await firebaseSignOut(auth);
+  currentUser = null;
+}
+
+/**
+ * Get current user (may be null if not authenticated)
+ */
+export function getCurrentUser(): User | null {
+  return currentUser;
 }
 
 /**

@@ -8,7 +8,7 @@ import { calculateHoldings, formatCurrency, formatPercent, formatQuantity } from
 import { cn } from '@/lib/utils';
 import type { LivePrice, Trade } from '@/types/portfolio';
 import { getTrades } from '@/services/firestoreService';
-import { ensureAuth } from '@/lib/auth';
+
 
 type TimeRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'All';
 
@@ -106,7 +106,6 @@ export default function AssetDetail() {
   useEffect(() => {
     const loadTrades = async () => {
       try {
-        await ensureAuth();
         const firestoreTrades = await getTrades();
         setTrades(firestoreTrades);
       } catch (error) {

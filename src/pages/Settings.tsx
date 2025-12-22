@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Sun, Moon, Monitor, Trash2, Pencil, Check, Wallet, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Sun, Moon, Monitor, Trash2, Pencil, Check, Wallet, ChevronRight, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,15 +17,19 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { getCurrentUser, signOut } from '@/lib/auth';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const user = getCurrentUser();
   
   // Mock portfolio data - in production this would come from context/state
   const [portfolioName, setPortfolioName] = useState('My Portfolio');
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(portfolioName);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const themeOptions = [
     { value: 'light' as const, label: 'Light', icon: Sun },
@@ -52,6 +56,21 @@ export default function Settings() {
     });
   };
 
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out. Please try again.',
+        variant: 'destructive',
+      });
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -69,6 +88,39 @@ export default function Settings() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-8 safe-area-bottom">
+        {/* Account Section */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Account
+          </h2>
+          
+          <div className="bg-card rounded-lg border border-border p-4 space-y-4">
+            {/* User Info */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground">Signed in as</p>
+                <p className="font-medium truncate">{user?.email || 'Unknown'}</p>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <div className="pt-4 border-t border-border">
+              <Button 
+                variant="outline" 
+                className="w-full gap-2 touch-target" 
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                <LogOut className="h-4 w-4" />
+                {loggingOut ? 'Signing out...' : 'Sign out'}
+              </Button>
+            </div>
+          </div>
+        </section>
+
         {/* Theme Section */}
         <section className="space-y-4">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
