@@ -261,8 +261,94 @@ async function fetchYahooStockPrices(symbols: string[]): Promise<Map<string, Yah
 
 // ==================== CRYPTO PRICE FETCHING ====================
 
+// Binance API endpoints (primary for crypto)
+const BINANCE_ENDPOINTS = [
+  'https://api.binance.com',
+  'https://api1.binance.com',
+  'https://api2.binance.com',
+  'https://api3.binance.com',
+  'https://api4.binance.com',
+];
+
+interface BinanceTickerPrice {
+  symbol: string;
+  price: string;
+}
+
+interface BinanceTicker24h {
+  symbol: string;
+  lastPrice: string;
+  prevClosePrice: string;
+  priceChange: string;
+  priceChangePercent: string;
+}
+
 /**
- * Fetch crypto prices from CoinGecko (batched)
+ * Fetch crypto prices from Binance (primary source)
+ * Uses /api/v3/ticker/24hr for price + change data
+ */
+async function fetchBinancePrices(symbols: string[]): Promise<Map<string, { price: number; prevClose: number; change: number; changePercent: number }>> {
+  const results = new Map<string, { price: number; prevClose: number; change: number; changePercent: number }>();
+  
+  if (symbols.length === 0) return results;
+  
+  // Build Binance symbols (add USDT suffix)
+  const binanceSymbols = symbols.map(s => `${s.toUpperCase()}USDT`);
+  
+  // Try endpoints in order until one works
+  for (const endpoint of BINANCE_ENDPOINTS) {
+    try {
+      // Use 24hr ticker for price change data
+      const symbolsParam = JSON.stringify(binanceSymbols);
+      const url = `${endpoint}/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsParam)}`;
+      
+      const response = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        console.warn(`Binance ${endpoint} error: ${response.status}`);
+        continue;
+      }
+      
+      const data: BinanceTicker24h[] = await response.json();
+      
+      for (const ticker of data) {
+        // Extract original symbol (remove USDT suffix)
+        const originalSymbol = ticker.symbol.replace('USDT', '');
+        const price = parseFloat(ticker.lastPrice);
+        const prevClose = parseFloat(ticker.prevClosePrice);
+        const change = parseFloat(ticker.priceChange);
+        const changePercent = parseFloat(ticker.priceChangePercent);
+        
+        if (!isNaN(price) && price > 0) {
+          results.set(originalSymbol, { price, prevClose, change, changePercent });
+        }
+      }
+      
+      // If we got results, return them
+      if (results.size > 0) {
+        console.log(`Binance: fetched ${results.size} prices from ${endpoint}`);
+        return results;
+      }
+    } catch (error) {
+      console.warn(`Binance ${endpoint} fetch error:`, error);
+    }
+  }
+  
+  return results;
+}
+
+/**
+ * Fetch single crypto price from Binance
+ */
+async function fetchBinancePrice(symbol: string): Promise<{ price: number; prevClose: number; change: number; changePercent: number } | null> {
+  const results = await fetchBinancePrices([symbol]);
+  return results.get(symbol.toUpperCase()) || null;
+}
+
+/**
+ * Fetch crypto prices from CoinGecko (fallback)
  */
 async function fetchCoinGeckoPrices(symbols: string[]): Promise<Map<string, number>> {
   const results = new Map<string, number>();
@@ -306,26 +392,6 @@ async function fetchCoinGeckoPrices(symbols: string[]): Promise<Map<string, numb
   }
   
   return results;
-}
-
-/**
- * Fetch single crypto price from Binance (fallback)
- */
-async function fetchBinancePrice(symbol: string): Promise<number | null> {
-  const upper = symbol.toUpperCase();
-  const binanceSymbol = `${upper}USDT`;
-  
-  try {
-    const response = await fetch(`${BINANCE_API}/ticker/price?symbol=${binanceSymbol}`);
-    
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    return data?.price ? parseFloat(data.price) : null;
-  } catch (error) {
-    console.warn(`Binance fetch error for ${symbol}:`, error);
-    return null;
-  }
 }
 
 // ==================== UNIFIED PRICE SERVICE ====================
@@ -410,40 +476,63 @@ export async function fetchPricesBatch(requests: PriceRequest[]): Promise<Map<st
     }
   }
   
-  // Fetch crypto from CoinGecko
+  // Fetch crypto from Binance (primary) with CoinGecko fallback
   if (cryptoSymbols.length > 0) {
-    const geckoResults = await fetchCoinGeckoPrices(cryptoSymbols);
+    const binanceResults = await fetchBinancePrices(cryptoSymbols);
+    const missingFromBinance: string[] = [];
     
     for (const symbol of cryptoSymbols) {
       const upper = symbol.toUpperCase();
-      let price = geckoResults.get(upper) || null;
+      const binanceData = binanceResults.get(upper);
       
-      // Fallback to Binance
-      if (!price) {
-        price = await fetchBinancePrice(symbol);
+      if (binanceData && binanceData.price > 0) {
+        const livePrice: LivePrice = {
+          symbol,
+          assetType: 'crypto',
+          price: binanceData.price,
+          previousClose: binanceData.prevClose,
+          change: binanceData.change,
+          changePercent: binanceData.changePercent,
+          timestamp: now,
+          source: 'binance',
+        };
+        
+        results.set(symbol, livePrice);
+        priceCache.set(getCacheKey(symbol, 'crypto'), { price: livePrice, timestamp: now });
+      } else {
+        missingFromBinance.push(symbol);
       }
+    }
+    
+    // Fallback to CoinGecko for symbols not on Binance
+    if (missingFromBinance.length > 0) {
+      const geckoResults = await fetchCoinGeckoPrices(missingFromBinance);
       
-      // Fallback to cache or skip
-      const cacheKey = getCacheKey(symbol, 'crypto');
-      if (!price || price <= 0) {
-        const stale = priceCache.get(cacheKey);
-        if (stale) {
-          console.warn(`Using stale cache for ${symbol}`);
-          results.set(symbol, stale.price);
+      for (const symbol of missingFromBinance) {
+        const upper = symbol.toUpperCase();
+        const price = geckoResults.get(upper);
+        const cacheKey = getCacheKey(symbol, 'crypto');
+        
+        if (price && price > 0) {
+          const livePrice: LivePrice = {
+            symbol,
+            assetType: 'crypto',
+            price,
+            timestamp: now,
+            source: 'coingecko',
+          };
+          
+          results.set(symbol, livePrice);
+          priceCache.set(cacheKey, { price: livePrice, timestamp: now });
+        } else {
+          // Final fallback to stale cache
+          const stale = priceCache.get(cacheKey);
+          if (stale) {
+            console.warn(`Using stale cache for ${symbol}`);
+            results.set(symbol, stale.price);
+          }
         }
-        continue;
       }
-      
-      const livePrice: LivePrice = {
-        symbol,
-        assetType: 'crypto',
-        price,
-        timestamp: now,
-        source: price === geckoResults.get(upper) ? 'coingecko' : 'binance',
-      };
-      
-      results.set(symbol, livePrice);
-      priceCache.set(cacheKey, { price: livePrice, timestamp: now });
     }
   }
   
