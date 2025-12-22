@@ -47,6 +47,9 @@ export interface LivePrice {
   symbol: string;
   assetType: AssetType;
   price: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
   timestamp: number;
   source: string;
 }
