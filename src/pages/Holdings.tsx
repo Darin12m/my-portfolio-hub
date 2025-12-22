@@ -205,6 +205,13 @@ export default function Holdings() {
             <AssetToggle value={assetType} onChange={setAssetType} />
             
             <div className="flex items-center gap-1">
+              {assetType === 'crypto' && (
+                <Link to="/crypto">
+                  <Button variant="ghost" size="sm" className="touch-target text-xs">
+                    Full View
+                  </Button>
+                </Link>
+              )}
               <ImportSettingsSheet
                 assetType={assetType}
                 trades={trades}
