@@ -12,14 +12,34 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ensureAuth } from '@/lib/auth';
-import { Trade, FirestoreTrade, TradeSource } from '@/types/portfolio';
+import type { Trade, TradeSource } from '@/types/portfolio';
 
 const TRADES_COLLECTION = 'trades';
+
+// Firestore document type (with Timestamp)
+interface FirestoreTradeDoc {
+  id: string;
+  userId: string;
+  brokerTransactionId: string;
+  action: 'BUY' | 'SELL';
+  timestamp: string;
+  isin: string;
+  ticker: string;
+  name: string;
+  shares: number;
+  pricePerShare: number;
+  priceCurrency: string;
+  totalValue: number;
+  totalCurrency: string;
+  exchangeRate: number;
+  source: TradeSource;
+  createdAt: Timestamp | null;
+}
 
 /**
  * Convert Firestore document to Trade object
  */
-function firestoreToTrade(doc: FirestoreTrade): Trade {
+function firestoreToTrade(doc: FirestoreTradeDoc): Trade {
   return {
     ...doc,
     createdAt: doc.createdAt instanceof Timestamp 
@@ -39,9 +59,9 @@ export async function getTrades(): Promise<Trade[]> {
   const snapshot = await getDocs(q);
   
   const trades: Trade[] = [];
-  snapshot.forEach((doc) => {
-    const data = doc.data() as FirestoreTrade;
-    trades.push(firestoreToTrade({ ...data, id: doc.id }));
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data() as FirestoreTradeDoc;
+    trades.push(firestoreToTrade({ ...data, id: docSnap.id }));
   });
   
   // Sort by timestamp descending
