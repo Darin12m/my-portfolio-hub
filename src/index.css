@@ -270,12 +270,21 @@
   .dark .allocation-bar {
     background-color: rgba(59, 130, 246, 0.25);
   }
+
+  /* Allocation bar subtle variant */
+  .allocation-bar-subtle {
+    background-color: rgba(59, 130, 246, 0.08);
+  }
+  
+  .dark .allocation-bar-subtle {
+    background-color: rgba(59, 130, 246, 0.12);
+  }
   
   /* Trading chart container - theme-aware */
   .trading-chart-container {
-    @apply rounded-2xl p-4 border;
+    @apply rounded-lg p-3 border;
     background-color: hsl(var(--chart-bg));
-    border-color: hsl(var(--chart-border));
+    border-color: hsl(var(--chart-border) / 0.5);
     background-image: 
       radial-gradient(circle, hsl(var(--chart-grid)) 1px, transparent 1px);
     background-size: 20px 20px;

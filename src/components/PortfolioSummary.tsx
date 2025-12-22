@@ -12,47 +12,47 @@ export function PortfolioSummary({ holdings }: PortfolioSummaryProps) {
   const isProfit = totalPL >= 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <Wallet className="h-4 w-4" />
-          <span className="text-xs font-medium uppercase tracking-wider">Total Value</span>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="rounded-lg border border-border/50 bg-card p-3">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+          <Wallet className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-medium uppercase tracking-wider">Total Value</span>
         </div>
-        <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
+        <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <PieChart className="h-4 w-4" />
-          <span className="text-xs font-medium uppercase tracking-wider">Invested</span>
+      <div className="rounded-lg border border-border/50 bg-card p-3">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+          <PieChart className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-medium uppercase tracking-wider">Invested</span>
         </div>
-        <p className="text-2xl font-bold">{formatCurrency(totalInvested)}</p>
+        <p className="text-xl font-bold">{formatCurrency(totalInvested)}</p>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+      <div className="rounded-lg border border-border/50 bg-card p-3">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           {isProfit ? (
-            <TrendingUp className="h-4 w-4 text-profit" />
+            <TrendingUp className="h-3.5 w-3.5 text-profit" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-loss" />
+            <TrendingDown className="h-3.5 w-3.5 text-loss" />
           )}
-          <span className="text-xs font-medium uppercase tracking-wider">Unrealized P/L</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider">Unrealized P/L</span>
         </div>
-        <p className={cn("text-2xl font-bold", isProfit ? "text-profit" : "text-loss")}>
+        <p className={cn("text-xl font-bold", isProfit ? "text-profit" : "text-loss")}>
           {isProfit ? '+' : ''}{formatCurrency(totalPL)}
         </p>
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+      <div className="rounded-lg border border-border/50 bg-card p-3">
+        <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
           {isProfit ? (
-            <TrendingUp className="h-4 w-4 text-profit" />
+            <TrendingUp className="h-3.5 w-3.5 text-profit" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-loss" />
+            <TrendingDown className="h-3.5 w-3.5 text-loss" />
           )}
-          <span className="text-xs font-medium uppercase tracking-wider">Return</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider">Return</span>
         </div>
-        <p className={cn("text-2xl font-bold", isProfit ? "text-profit" : "text-loss")}>
+        <p className={cn("text-xl font-bold", isProfit ? "text-profit" : "text-loss")}>
           {formatPercent(totalPLPercent)}
         </p>
       </div>

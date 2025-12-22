@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Switch } from '@/components/ui/switch';
-import { Settings2, ChevronDown, TrendingUp, RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 import { Holding, Trade } from '@/types/portfolio';
 import { calculatePortfolioTotals, formatCurrency } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
@@ -130,7 +129,6 @@ function formatTimeLabel(timestamp: number, range: TimeRange): string {
 export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('1D');
   const [baselineType, setBaselineType] = useState<BaselineType>('Previous Close');
-  const [showKeyEvents, setShowKeyEvents] = useState(false);
   const [chartKey, setChartKey] = useState(0);
   
   const { totalValue, totalPL, totalPLPercent } = calculatePortfolioTotals(holdings);
@@ -150,8 +148,6 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
   }, [chartData, baselineType, totalValue]);
   
   const currentPrice = totalValue;
-  const priceChange = currentPrice - baseline;
-  const priceChangePercent = baseline > 0 ? (priceChange / baseline) * 100 : 0;
   
   // Determine if performance is positive (GREEN) or negative (RED)
   const isPositive = totalPL >= 0;
@@ -173,7 +169,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
   if (holdings.length === 0) {
     return (
       <div className="trading-chart-container">
-        <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <div className="flex items-center justify-center h-56 text-muted-foreground">
           <p>Import trades to see portfolio chart</p>
         </div>
       </div>
@@ -182,16 +178,16 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
 
   return (
     <div className="trading-chart-container">
-      {/* Chart Controls */}
-      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+      {/* Chart Controls - Simplified */}
+      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         {/* Time Range Tabs */}
-        <div className="flex items-center gap-1 bg-chart-surface rounded-lg p-1 overflow-x-auto scroll-smooth-x">
+        <div className="flex items-center gap-0.5 bg-chart-surface rounded-lg p-0.5 overflow-x-auto scroll-smooth-x">
           {TIME_RANGES.map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-all touch-target min-w-[44px]",
+                "px-2.5 py-1 text-xs font-medium rounded-md transition-all min-w-[36px]",
                 timeRange === range
                   ? "bg-chart-active text-chart-active-foreground"
                   : "text-chart-muted hover:text-chart-foreground"
@@ -202,8 +198,8 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
           ))}
         </div>
         
-        {/* Right Controls */}
-        <div className="flex items-center gap-2">
+        {/* Right Controls - Simplified */}
+        <div className="flex items-center gap-1">
           {/* Refresh Button */}
           <Button 
             variant="ghost" 
@@ -214,16 +210,6 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
           >
             <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
           </Button>
-          
-          {/* Key Events Toggle */}
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-chart-muted">Key Events</span>
-            <Switch
-              checked={showKeyEvents}
-              onCheckedChange={setShowKeyEvents}
-              className="scale-75"
-            />
-          </div>
           
           {/* Baseline Dropdown */}
           <DropdownMenu>
@@ -241,24 +227,13 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
-          {/* Advanced Chart Button */}
-          <Button variant="ghost" size="sm" className="h-8 text-xs text-chart-muted hover:text-chart-foreground hidden sm:flex">
-            <TrendingUp className="w-3.5 h-3.5 mr-1" />
-            Advanced
-          </Button>
-          
-          {/* Settings */}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-chart-muted hover:text-chart-foreground">
-            <Settings2 className="w-4 h-4" />
-          </Button>
         </div>
       </div>
       
       {/* Price Header - Uses GREEN for profit, RED for loss */}
-      <div className="mb-4">
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="text-2xl font-semibold text-chart-foreground">
+      <div className="mb-3">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xl font-semibold text-chart-foreground">
             {formatCurrency(currentPrice)}
           </span>
           <div className={cn(
@@ -271,17 +246,17 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
             <span>({isPositive ? '+' : ''}{totalPLPercent.toFixed(2)}%)</span>
           </div>
         </div>
-        <p className="text-xs text-chart-muted mt-1">
+        <p className="text-xs text-chart-muted mt-0.5">
           Total P/L from invested amount
         </p>
       </div>
       
       {/* Main Chart - Line and fill color based on performance */}
-      <div className="h-64 sm:h-72 w-full relative">
+      <div className="h-52 sm:h-64 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart 
             data={chartData}
-            margin={{ top: 8, right: 60, left: 0, bottom: 0 }}
+            margin={{ top: 8, right: 55, left: 0, bottom: 0 }}
           >
             <defs>
               {/* Green gradient for positive performance */}
@@ -311,7 +286,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
               tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 10 }}
               tickFormatter={(val) => formatCurrency(val).replace('$', '')}
               orientation="right"
-              width={55}
+              width={50}
             />
             
             {/* Baseline Reference Line */}
@@ -364,7 +339,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
         {/* Current Price Badge - GREEN or RED */}
         <div 
           className={cn(
-            "absolute right-0 px-2 py-1 rounded text-xs font-medium",
+            "absolute right-0 px-2 py-0.5 rounded text-xs font-medium",
             isPositive 
               ? "bg-chart-profit text-white" 
               : "bg-chart-loss text-white"
@@ -376,19 +351,6 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
         >
           {formatCurrency(currentPrice)}
         </div>
-      </div>
-      
-      {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-chart-border flex items-center justify-between">
-        <p className="text-xs text-chart-muted">
-          {isLoading ? 'Updating prices...' : 'Live prices'}
-        </p>
-        {isLoading && (
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-chart-profit animate-pulse" />
-            <span className="text-xs text-chart-muted">Syncing</span>
-          </div>
-        )}
       </div>
     </div>
   );
