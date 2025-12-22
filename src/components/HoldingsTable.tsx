@@ -1,9 +1,9 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Holding } from '@/types/portfolio';
 import { formatCurrency, formatPercent, formatQuantity } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
-import { ArrowUpDown, ArrowUp, ArrowDown, Pencil, Trash2, X } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AssetLogo } from '@/components/AssetLogo';
@@ -31,18 +31,10 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>('allocation');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const headerScrollRef = useRef<HTMLDivElement>(null);
-  const bodyScrollRef = useRef<HTMLDivElement>(null);
 
-  // Sync scroll between header and body
-  const handleBodyScroll = () => {
-    if (headerScrollRef.current && bodyScrollRef.current) {
-      headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
-    }
-  };
+  const isEditMode = selectedSymbols.size > 0;
 
   const handleSort = (field: SortField) => {
     if (isEditMode) return;
@@ -83,14 +75,15 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />;
+      return <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />;
     }
     return sortDirection === 'asc' 
-      ? <ArrowUp className="h-3 w-3 text-primary flex-shrink-0" />
-      : <ArrowDown className="h-3 w-3 text-primary flex-shrink-0" />;
+      ? <ArrowUp className="h-3 w-3 text-primary" />
+      : <ArrowDown className="h-3 w-3 text-primary" />;
   };
 
-  const toggleSelection = (symbol: string) => {
+  const toggleSelection = (symbol: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedSymbols(prev => {
       const next = new Set(prev);
       if (next.has(symbol)) {
@@ -102,39 +95,23 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
     });
   };
 
-  const toggleSelectAll = () => {
-    if (selectedSymbols.size === holdings.length) {
-      setSelectedSymbols(new Set());
-    } else {
-      setSelectedSymbols(new Set(holdings.map(h => h.symbol)));
-    }
-  };
-
   const handleDelete = () => {
     if (onDeleteHoldings) {
       onDeleteHoldings(Array.from(selectedSymbols));
     }
     setSelectedSymbols(new Set());
-    setIsEditMode(false);
     setShowDeleteDialog(false);
   };
 
   const handleRowClick = (holding: Holding) => {
-    if (isEditMode) {
-      toggleSelection(holding.symbol);
-    } else {
+    if (!isEditMode) {
       navigate(`/asset/${holding.symbol}`);
     }
   };
 
-  const exitEditMode = () => {
-    setIsEditMode(false);
-    setSelectedSymbols(new Set());
-  };
-
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-border bg-card shadow-sm">
+      <div className="rounded-lg border border-border/50 bg-card">
         <div className="p-8 text-center">
           <div className="animate-pulse-subtle text-muted-foreground">
             Loading holdings...
@@ -146,11 +123,11 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (holdings.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card shadow-sm">
-        <div className="p-12 text-center">
+      <div className="rounded-lg border border-border/50 bg-card">
+        <div className="p-10 text-center">
           <p className="text-muted-foreground">No holdings yet</p>
           <p className="text-sm text-muted-foreground/60 mt-1">
-            Import trades or connect an exchange to get started
+            Import trades to get started
           </p>
         </div>
       </div>
@@ -158,248 +135,192 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
-      {/* Table Header with Edit Button */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2">
-          {isEditMode && (
-            <>
-              <Checkbox
-                checked={selectedSymbols.size === holdings.length}
-                onCheckedChange={toggleSelectAll}
-                className="touch-target"
-              />
-              <span className="text-sm text-muted-foreground">
-                {selectedSymbols.size} selected
-              </span>
-            </>
-          )}
-          {!isEditMode && (
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {holdings.length} Holdings
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {isEditMode && selectedSymbols.size > 0 && (
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              className="gap-1.5 h-8"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
-            </Button>
-          )}
-          <Button
-            variant={isEditMode ? "secondary" : "ghost"}
-            size="sm"
-            className="gap-1.5 h-8"
-            onClick={isEditMode ? exitEditMode : () => setIsEditMode(true)}
+    <div className="rounded-lg border border-border/50 bg-card overflow-hidden">
+      {/* Table Header with count/selection */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/30 bg-muted/20">
+        <span className="text-xs font-medium text-muted-foreground">
+          {isEditMode ? `${selectedSymbols.size} selected` : `${holdings.length} Holdings`}
+        </span>
+        {isEditMode && (
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            className="gap-1 h-7 text-xs"
+            onClick={() => setShowDeleteDialog(true)}
           >
-            {isEditMode ? (
-              <>
-                <X className="h-3.5 w-3.5" />
-                Done
-              </>
-            ) : (
-              <>
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </>
-            )}
+            <Trash2 className="h-3 w-3" />
+            Delete
           </Button>
-        </div>
+        )}
       </div>
 
-      {/* Table Header Row */}
-      <div className="grid grid-cols-[minmax(180px,1.5fr)_repeat(5,1fr)] border-b border-border/60 bg-muted/20">
+      {/* Table Header Row - Simplified single line headers */}
+      <div className="grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] bg-muted/10">
         {/* Security Header */}
-        <div className="py-2.5 px-3 border-r border-border/40">
-          <div className="flex items-center gap-2">
-            {isEditMode && <div className="w-5" />}
-            <button
-              onClick={() => handleSort('name')}
-              className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-              disabled={isEditMode}
-            >
-              Security
-              {!isEditMode && <SortIcon field="name" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Position Header */}
-        <div className="py-2.5 px-2 text-center border-r border-border/40">
+        <div className="py-2 px-3">
           <button
-            onClick={() => handleSort('quantity')}
-            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            onClick={() => handleSort('name')}
+            className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
             disabled={isEditMode}
           >
-            <span>Position</span>
-            <span>Holding</span>
-            {!isEditMode && <SortIcon field="quantity" />}
+            Security
+            {!isEditMode && <SortIcon field="name" />}
           </button>
         </div>
 
-        {/* Cashflow Header */}
-        <div className="py-2.5 px-2 text-center border-r border-border/40">
+        {/* Position Header */}
+        <div className="py-2 px-2 text-center">
           <button
-            onClick={() => handleSort('cashflow')}
-            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            onClick={() => handleSort('quantity')}
+            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
             disabled={isEditMode}
           >
-            <span>Cashflow</span>
-            <span>Per Share</span>
-            {!isEditMode && <SortIcon field="cashflow" />}
+            Shares
+          </button>
+        </div>
+
+        {/* Avg Cost Header */}
+        <div className="py-2 px-2 text-center">
+          <button
+            onClick={() => handleSort('cashflow')}
+            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+            disabled={isEditMode}
+          >
+            Avg Cost
           </button>
         </div>
 
         {/* Value Header */}
-        <div className="py-2.5 px-2 text-center border-r border-border/40">
+        <div className="py-2 px-2 text-center">
           <button
             onClick={() => handleSort('value')}
-            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
             disabled={isEditMode}
           >
-            <span>Value</span>
-            <span>Per Share</span>
-            {!isEditMode && <SortIcon field="value" />}
+            Value
           </button>
         </div>
 
-        {/* Net P/L Header */}
-        <div className="py-2.5 px-2 text-center border-r border-border/40">
+        {/* P/L Header */}
+        <div className="py-2 px-2 text-center">
           <button
             onClick={() => handleSort('pl')}
-            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
             disabled={isEditMode}
           >
-            <span>Net P/L</span>
-            <span>In %</span>
-            {!isEditMode && <SortIcon field="pl" />}
+            P/L
           </button>
         </div>
 
         {/* Allocation Header */}
-        <div className="py-2.5 px-2 text-center">
+        <div className="py-2 px-2 text-center">
           <button
             onClick={() => handleSort('allocation')}
-            className="flex flex-col items-center gap-0 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors mx-auto leading-tight"
+            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
             disabled={isEditMode}
           >
-            <span>Alloc</span>
-            <span>%</span>
-            {!isEditMode && <SortIcon field="allocation" />}
+            Alloc
           </button>
         </div>
       </div>
 
       {/* Table Body */}
-      <div className="divide-y divide-border/30">
+      <div className="divide-y divide-border/20">
         {sortedHoldings.map((holding) => (
           <div
             key={holding.symbol}
             onClick={() => handleRowClick(holding)}
             className={cn(
-              "grid grid-cols-[minmax(180px,1.5fr)_repeat(5,1fr)] cursor-pointer",
-              "transition-colors duration-150",
-              isEditMode && selectedSymbols.has(holding.symbol) && "bg-primary/5",
-              !isEditMode && "hover:bg-muted/40 active:bg-muted/60"
+              "grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] cursor-pointer",
+              "transition-colors duration-100",
+              selectedSymbols.has(holding.symbol) && "bg-primary/5",
+              !isEditMode && "hover:bg-muted/30"
             )}
           >
             {/* Security Cell */}
-            <div className="py-2.5 px-3 relative overflow-hidden border-r border-border/40">
-              {/* Allocation Bar - behind content, solid fill */}
+            <div className="py-2.5 px-3 relative overflow-hidden">
+              {/* Allocation Bar - subtle */}
               <div 
-                className="absolute inset-y-1 left-0 right-0 pointer-events-none overflow-hidden"
+                className="absolute inset-y-0.5 left-0 right-0 pointer-events-none"
                 aria-hidden="true"
               >
                 <div 
-                  className="h-full rounded-r transition-all duration-500 ease-out allocation-bar"
+                  className="h-full rounded-r allocation-bar-subtle"
                   style={{ 
                     width: holding.allocationPercent >= 0 ? `${Math.min(holding.allocationPercent, 100)}%` : '0%',
-                    minWidth: holding.allocationPercent > 0 ? '4px' : '0',
+                    minWidth: holding.allocationPercent > 0 ? '2px' : '0',
                   }}
                 />
               </div>
 
               {/* Content */}
               <div className="flex items-center gap-2 relative z-10">
-                {isEditMode && (
-                  <Checkbox
-                    checked={selectedSymbols.has(holding.symbol)}
-                    onCheckedChange={() => toggleSelection(holding.symbol)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="touch-target flex-shrink-0"
-                  />
-                )}
+                {/* Checkbox on long-press / hover in edit mode */}
+                <Checkbox
+                  checked={selectedSymbols.has(holding.symbol)}
+                  onCheckedChange={() => {}}
+                  onClick={(e) => toggleSelection(holding.symbol, e)}
+                  className={cn(
+                    "flex-shrink-0 transition-opacity",
+                    isEditMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  )}
+                />
                 
                 {/* Logo */}
                 <AssetLogo
                   symbol={holding.symbol}
                   name={holding.name}
                   assetType={holding.assetType}
-                  size="md"
+                  size="sm"
                 />
                 
-                {/* Name & ISIN */}
+                {/* Name & Symbol */}
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-primary text-sm truncate leading-tight hover:underline">
-                    {holding.name}
+                  <p className="font-medium text-sm truncate leading-tight">
+                    {holding.symbol}
                   </p>
                   <p className="text-[10px] text-muted-foreground truncate">
-                    {holding.assetType === 'stock' ? holding.isin : holding.symbol}
+                    {holding.name}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Position / Holding Period */}
-            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
-              <p className="font-semibold text-sm text-foreground">{formatQuantity(holding.quantity)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {holding.holdingPeriodDays} days
-              </p>
+            {/* Shares */}
+            <div className="py-2.5 px-2 text-center flex items-center justify-center">
+              <p className="text-sm font-medium">{formatQuantity(holding.quantity)}</p>
             </div>
 
-            {/* Cumulative Cashflow */}
-            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
-              <p className="font-semibold text-sm text-foreground">{formatCurrency(holding.investedAmount)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {formatCurrency(holding.averageBuyPrice)}/share
-              </p>
+            {/* Avg Cost */}
+            <div className="py-2.5 px-2 text-center flex items-center justify-center">
+              <p className="text-sm">{formatCurrency(holding.averageBuyPrice)}</p>
             </div>
 
-            {/* Value Per Share */}
-            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
-              <p className="font-semibold text-sm text-foreground">{formatCurrency(holding.currentValue)}</p>
-              <p className="text-[10px] text-muted-foreground">
-                {formatCurrency(holding.currentPrice)}/share
-              </p>
+            {/* Current Value */}
+            <div className="py-2.5 px-2 text-center flex items-center justify-center">
+              <p className="text-sm font-medium">{formatCurrency(holding.currentValue)}</p>
             </div>
 
-            {/* Net Profit/Loss */}
-            <div className="py-2.5 px-2 text-center border-r border-border/40 flex flex-col justify-center">
+            {/* P/L */}
+            <div className="py-2.5 px-2 text-center flex flex-col items-center justify-center">
               <p className={cn(
-                "font-semibold text-sm",
+                "text-sm font-medium",
                 holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
               )}>
-                {holding.unrealizedPL >= 0 ? '+' : '-'}${Math.abs(holding.unrealizedPL).toFixed(2)}
+                {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
               </p>
               <p className={cn(
-                "text-[10px] font-medium",
+                "text-[10px]",
                 holding.unrealizedPLPercent >= 0 ? "text-profit" : "text-loss"
               )}>
-                {holding.unrealizedPLPercent >= 0 ? '+' : '-'}{Math.abs(holding.unrealizedPLPercent).toFixed(2)}%
+                {formatPercent(holding.unrealizedPLPercent)}
               </p>
             </div>
 
             {/* Allocation */}
             <div className="py-2.5 px-2 text-center flex items-center justify-center">
-              <p className="font-medium text-sm text-foreground">
-                {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(2)}%` : '--'}
+              <p className="text-sm">
+                {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
               </p>
             </div>
           </div>
@@ -408,7 +329,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="safe-area-inset">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Holdings?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -416,10 +337,10 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="touch-target">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 touch-target"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>

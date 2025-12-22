@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { AssetToggle } from '@/components/AssetToggle';
 import { HoldingsTable } from '@/components/HoldingsTable';
 import { PortfolioSummary } from '@/components/PortfolioSummary';
 import { TradingChart } from '@/components/TradingChart';
-import { ImportSettingsSheet } from '@/components/ImportSettingsSheet';
+import { ImportSheet } from '@/components/ImportSheet';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
-import { AssetType, Trade, LivePrice, TradeSource } from '@/types/portfolio';
+import { Trade, LivePrice, TradeSource } from '@/types/portfolio';
 import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
@@ -17,13 +16,10 @@ import { fetchTrades, addTrades, deleteTradesBySymbol, deleteTradesBySource, mig
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 export default function Holdings() {
-  const [assetType, setAssetType] = useState<AssetType>('stock');
   const [trades, setTrades] = useState<Trade[]>([]);
   const [prices, setPrices] = useState<Map<string, LivePrice>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [binanceConnected, setBinanceConnected] = useState(false);
-  const [gateioConnected, setGateioConnected] = useState(false);
   const [dbLoading, setDbLoading] = useState(true);
   const { toast } = useToast();
   const refreshCleanupRef = useRef<(() => void) | null>(null);
@@ -55,11 +51,11 @@ export default function Holdings() {
     loadTrades();
   }, [toast]);
 
-  // Get symbols for current asset type
+  // Get all stock symbols
   const symbols = useMemo(() => {
-    const filteredTrades = trades.filter(t => t.assetType === assetType);
-    return [...new Set(filteredTrades.map(t => t.symbol))];
-  }, [trades, assetType]);
+    const stockTrades = trades.filter(t => t.assetType === 'stock');
+    return [...new Set(stockTrades.map(t => t.symbol))];
+  }, [trades]);
 
   // Handle price updates
   const handlePriceUpdate = useCallback((newPrices: Map<string, LivePrice>) => {
@@ -81,7 +77,7 @@ export default function Holdings() {
     Object.entries(mockPrices).forEach(([symbol, price]) => {
       initialPrices.set(symbol, {
         symbol,
-        assetType: ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'AVAX'].includes(symbol) ? 'crypto' : 'stock',
+        assetType: 'stock',
         price,
         timestamp: Date.now(),
         source: 'mock',
@@ -92,7 +88,7 @@ export default function Holdings() {
     setLastUpdate(new Date());
   }, []);
 
-  // Start auto-refresh when symbols or asset type changes
+  // Start auto-refresh when symbols change
   useEffect(() => {
     if (symbols.length === 0) return;
 
@@ -104,7 +100,7 @@ export default function Holdings() {
     // Start new refresh
     refreshCleanupRef.current = startPriceRefresh(
       symbols,
-      assetType,
+      'stock',
       handlePriceUpdate,
       REFRESH_INTERVAL
     );
@@ -114,17 +110,17 @@ export default function Holdings() {
         refreshCleanupRef.current();
       }
     };
-  }, [symbols, assetType, handlePriceUpdate]);
+  }, [symbols, handlePriceUpdate]);
 
-  // Calculate global portfolio total from ALL trades (not filtered by asset type)
+  // Calculate global portfolio total from ALL trades
   const globalPortfolioTotal = useMemo(() => {
     return calculateGlobalPortfolioTotal(trades, prices);
   }, [trades, prices]);
 
   // Calculate holdings with global total for allocation
   const holdings = useMemo(() => {
-    return calculateHoldings(trades, prices, assetType, globalPortfolioTotal);
-  }, [trades, prices, assetType, globalPortfolioTotal]);
+    return calculateHoldings(trades, prices, 'stock', globalPortfolioTotal);
+  }, [trades, prices, globalPortfolioTotal]);
 
   // Handle trade imports - with source replacement (no merging)
   const handleImport = async (newTrades: Trade[], source?: TradeSource) => {
@@ -173,58 +169,21 @@ export default function Holdings() {
     }
   };
 
-  // Handle exchange connections
-  const handleBinanceConnect = async (apiKey: string, apiSecret: string): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setBinanceConnected(true);
-    toast({
-      title: "Binance connected",
-      description: "Your Binance account is now syncing.",
-    });
-    return true;
-  };
-
-  const handleGateioConnect = async (apiKey: string, apiSecret: string): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setGateioConnected(true);
-    toast({
-      title: "Gate.io connected",
-      description: "Your Gate.io account is now syncing.",
-    });
-    return true;
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
-        <div className="container mx-auto px-4 py-4">
+      {/* Header - Simplified */}
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">Holdings</h1>
-            
-            <AssetToggle value={assetType} onChange={setAssetType} />
+            <h1 className="text-lg font-semibold">Portfolio</h1>
             
             <div className="flex items-center gap-1">
-              {assetType === 'crypto' && (
-                <Link to="/crypto">
-                  <Button variant="ghost" size="sm" className="touch-target text-xs">
-                    Full View
-                  </Button>
-                </Link>
-              )}
-              <ImportSettingsSheet
-                assetType={assetType}
+              <ImportSheet
                 trades={trades}
                 onImport={handleImport}
-                binanceConnected={binanceConnected}
-                gateioConnected={gateioConnected}
-                onBinanceConnect={handleBinanceConnect}
-                onGateioConnect={handleGateioConnect}
-                onBinanceDisconnect={() => setBinanceConnected(false)}
-                onGateioDisconnect={() => setGateioConnected(false)}
               />
               <Link to="/settings">
-                <Button variant="ghost" size="icon" className="touch-target">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
                   <Settings className="h-5 w-5" />
                 </Button>
               </Link>
@@ -236,7 +195,7 @@ export default function Holdings() {
       {/* Main Content */}
       <main className="safe-area-bottom">
         {/* Chart and Summary - contained */}
-        <div className="container mx-auto px-4 py-6 space-y-6">
+        <div className="container mx-auto px-4 py-5 space-y-5">
           {/* Trading Chart */}
           <TradingChart 
             holdings={holdings} 
@@ -246,8 +205,8 @@ export default function Holdings() {
           
           {/* Live Indicator */}
           {lastUpdate && (
-            <div className="flex items-center justify-center gap-1.5 -mt-4">
-              <span className="w-1.5 h-1.5 rounded-full bg-chart-profit animate-pulse" />
+            <div className="flex items-center justify-center gap-1.5 -mt-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
               <span className="text-xs text-muted-foreground">
                 Live · {lastUpdate.toLocaleTimeString()}
               </span>
