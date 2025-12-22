@@ -154,177 +154,182 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
         )}
       </div>
 
-      {/* Table Header Row - Simplified single line headers */}
-      <div className="grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] bg-muted/10">
-        {/* Security Header */}
-        <div className="py-2 px-3">
-          <button
-            onClick={() => handleSort('name')}
-            className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
-            disabled={isEditMode}
-          >
-            Security
-            {!isEditMode && <SortIcon field="name" />}
-          </button>
-        </div>
-
-        {/* Position Header */}
-        <div className="py-2 px-2 text-center">
-          <button
-            onClick={() => handleSort('quantity')}
-            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
-            disabled={isEditMode}
-          >
-            Shares
-          </button>
-        </div>
-
-        {/* Avg Cost Header */}
-        <div className="py-2 px-2 text-center">
-          <button
-            onClick={() => handleSort('cashflow')}
-            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
-            disabled={isEditMode}
-          >
-            Avg Cost
-          </button>
-        </div>
-
-        {/* Value Header */}
-        <div className="py-2 px-2 text-center">
-          <button
-            onClick={() => handleSort('value')}
-            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
-            disabled={isEditMode}
-          >
-            Value
-          </button>
-        </div>
-
-        {/* P/L Header */}
-        <div className="py-2 px-2 text-center">
-          <button
-            onClick={() => handleSort('pl')}
-            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
-            disabled={isEditMode}
-          >
-            P/L
-          </button>
-        </div>
-
-        {/* Allocation Header */}
-        <div className="py-2 px-2 text-center">
-          <button
-            onClick={() => handleSort('allocation')}
-            className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
-            disabled={isEditMode}
-          >
-            Alloc
-          </button>
-        </div>
-      </div>
-
-      {/* Table Body */}
-      <div className="divide-y divide-border/20">
-        {sortedHoldings.map((holding) => (
-          <div
-            key={holding.symbol}
-            onClick={() => handleRowClick(holding)}
-            className={cn(
-              "grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] cursor-pointer",
-              "transition-colors duration-100",
-              selectedSymbols.has(holding.symbol) && "bg-primary/5",
-              !isEditMode && "hover:bg-muted/30"
-            )}
-          >
-            {/* Security Cell */}
-            <div className="py-2.5 px-3 relative overflow-hidden">
-              {/* Allocation Bar - subtle */}
-              <div 
-                className="absolute inset-y-0.5 left-0 right-0 pointer-events-none"
-                aria-hidden="true"
+      {/* Scrollable Table Container */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px]">
+          {/* Table Header Row - Simplified single line headers */}
+          <div className="grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] bg-muted/10">
+            {/* Security Header */}
+            <div className="py-2 px-3">
+              <button
+                onClick={() => handleSort('name')}
+                className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                disabled={isEditMode}
               >
-                <div 
-                  className="h-full rounded-r allocation-bar-subtle"
-                  style={{ 
-                    width: holding.allocationPercent >= 0 ? `${Math.min(holding.allocationPercent, 100)}%` : '0%',
-                    minWidth: holding.allocationPercent > 0 ? '2px' : '0',
-                  }}
-                />
-              </div>
+                Security
+                {!isEditMode && <SortIcon field="name" />}
+              </button>
+            </div>
 
-              {/* Content */}
-              <div className="flex items-center gap-2 relative z-10">
-                {/* Checkbox on long-press / hover in edit mode */}
-                <Checkbox
-                  checked={selectedSymbols.has(holding.symbol)}
-                  onCheckedChange={() => {}}
-                  onClick={(e) => toggleSelection(holding.symbol, e)}
-                  className={cn(
-                    "flex-shrink-0 transition-opacity",
-                    isEditMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  )}
-                />
-                
-                {/* Logo */}
-                <AssetLogo
-                  symbol={holding.symbol}
-                  name={holding.name}
-                  assetType={holding.assetType}
-                  size="sm"
-                />
-                
-                {/* Name & Symbol */}
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm truncate leading-tight">
-                    {holding.symbol}
+            {/* Position Header */}
+            <div className="py-2 px-2 text-center">
+              <button
+                onClick={() => handleSort('quantity')}
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                disabled={isEditMode}
+              >
+                Shares
+              </button>
+            </div>
+
+            {/* Avg Cost Header */}
+            <div className="py-2 px-2 text-center">
+              <button
+                onClick={() => handleSort('cashflow')}
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                disabled={isEditMode}
+              >
+                Avg Cost
+              </button>
+            </div>
+
+            {/* Value Header */}
+            <div className="py-2 px-2 text-center">
+              <button
+                onClick={() => handleSort('value')}
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                disabled={isEditMode}
+              >
+                Value
+              </button>
+            </div>
+
+            {/* P/L Header */}
+            <div className="py-2 px-2 text-center">
+              <button
+                onClick={() => handleSort('pl')}
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                disabled={isEditMode}
+              >
+                P/L
+              </button>
+            </div>
+
+            {/* Allocation Header */}
+            <div className="py-2 px-2 text-center">
+              <button
+                onClick={() => handleSort('allocation')}
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                disabled={isEditMode}
+              >
+                Alloc
+              </button>
+            </div>
+          </div>
+
+          {/* Table Body */}
+          <div className="divide-y divide-border/20">
+            {sortedHoldings.map((holding) => (
+              <div
+                key={holding.symbol}
+                onClick={() => handleRowClick(holding)}
+                className={cn(
+                  "grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] cursor-pointer",
+                  "transition-colors duration-100",
+                  selectedSymbols.has(holding.symbol) && "bg-primary/5",
+                  !isEditMode && "hover:bg-muted/30"
+                )}
+              >
+                {/* Security Cell */}
+                <div className="py-2.5 px-3 relative overflow-hidden">
+                  {/* Allocation Bar - subtle */}
+                  <div 
+                    className="absolute inset-y-0.5 left-0 right-0 pointer-events-none"
+                    aria-hidden="true"
+                  >
+                    <div 
+                      className="h-full rounded-r allocation-bar-subtle"
+                      style={{ 
+                        width: holding.allocationPercent >= 0 ? `${Math.min(holding.allocationPercent, 100)}%` : '0%',
+                        minWidth: holding.allocationPercent > 0 ? '2px' : '0',
+                      }}
+                    />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex items-center gap-2 relative z-10">
+                    {/* Checkbox on long-press / hover in edit mode */}
+                    <Checkbox
+                      checked={selectedSymbols.has(holding.symbol)}
+                      onCheckedChange={() => {}}
+                      onClick={(e) => toggleSelection(holding.symbol, e)}
+                      className={cn(
+                        "flex-shrink-0 transition-opacity",
+                        isEditMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                    />
+                    
+                    {/* Logo */}
+                    <AssetLogo
+                      symbol={holding.symbol}
+                      name={holding.name}
+                      assetType={holding.assetType}
+                      size="sm"
+                    />
+                    
+                    {/* Name & Symbol */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate leading-tight">
+                        {holding.symbol}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {holding.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shares */}
+                <div className="py-2.5 px-2 text-center flex items-center justify-center">
+                  <p className="text-sm font-medium">{formatQuantity(holding.quantity)}</p>
+                </div>
+
+                {/* Avg Cost */}
+                <div className="py-2.5 px-2 text-center flex items-center justify-center">
+                  <p className="text-sm">{formatCurrency(holding.averageBuyPrice)}</p>
+                </div>
+
+                {/* Current Value */}
+                <div className="py-2.5 px-2 text-center flex items-center justify-center">
+                  <p className="text-sm font-medium">{formatCurrency(holding.currentValue)}</p>
+                </div>
+
+                {/* P/L */}
+                <div className="py-2.5 px-2 text-center flex flex-col items-center justify-center">
+                  <p className={cn(
+                    "text-sm font-medium",
+                    holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
+                  )}>
+                    {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {holding.name}
+                  <p className={cn(
+                    "text-[10px]",
+                    holding.unrealizedPLPercent >= 0 ? "text-profit" : "text-loss"
+                  )}>
+                    {formatPercent(holding.unrealizedPLPercent)}
+                  </p>
+                </div>
+
+                {/* Allocation */}
+                <div className="py-2.5 px-2 text-center flex items-center justify-center">
+                  <p className="text-sm">
+                    {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Shares */}
-            <div className="py-2.5 px-2 text-center flex items-center justify-center">
-              <p className="text-sm font-medium">{formatQuantity(holding.quantity)}</p>
-            </div>
-
-            {/* Avg Cost */}
-            <div className="py-2.5 px-2 text-center flex items-center justify-center">
-              <p className="text-sm">{formatCurrency(holding.averageBuyPrice)}</p>
-            </div>
-
-            {/* Current Value */}
-            <div className="py-2.5 px-2 text-center flex items-center justify-center">
-              <p className="text-sm font-medium">{formatCurrency(holding.currentValue)}</p>
-            </div>
-
-            {/* P/L */}
-            <div className="py-2.5 px-2 text-center flex flex-col items-center justify-center">
-              <p className={cn(
-                "text-sm font-medium",
-                holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
-              )}>
-                {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
-              </p>
-              <p className={cn(
-                "text-[10px]",
-                holding.unrealizedPLPercent >= 0 ? "text-profit" : "text-loss"
-              )}>
-                {formatPercent(holding.unrealizedPLPercent)}
-              </p>
-            </div>
-
-            {/* Allocation */}
-            <div className="py-2.5 px-2 text-center flex items-center justify-center">
-              <p className="text-sm">
-                {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
-              </p>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
