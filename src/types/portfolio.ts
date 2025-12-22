@@ -93,5 +93,5 @@ export interface ImportDiagnostics {
   skipReasons: Record<string, number>;
   warnings: string[];
   totalInvested: number;
-  uniqueSymbols: string[];
+  uniqueTickers: string[];
 }

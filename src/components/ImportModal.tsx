@@ -9,8 +9,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Upload, FileText, CheckCircle2, AlertTriangle, Loader2, Info } from 'lucide-react';
-import { parseFlexibleCSV, parseIBKRCSV } from '@/services/importService';
-import type { Trade, TradeSource, ImportResult } from '@/types/portfolio';
+import { parseFlexibleCSV, parseIBKRCSV, ParseResult } from '@/services/importService';
+import type { Trade, TradeSource } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
 
 type ImportSource = 'trading212' | 'ibkr';
@@ -26,7 +26,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [parseResult, setParseResult] = useState<ImportResult | null>(null);
+  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'result'>('upload');
   const [importedCount, setImportedCount] = useState(0);
@@ -93,7 +93,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
           skipReasons: {}, 
           warnings: [], 
           totalInvested: 0, 
-          uniqueSymbols: [] 
+          uniqueTickers: [] 
         },
       });
       setStep('preview');
@@ -198,7 +198,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Unique tickers:</span>
-                  <span className="font-medium">{parseResult.diagnostics.uniqueSymbols.length}</span>
+                  <span className="font-medium">{parseResult.diagnostics.uniqueTickers.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total invested:</span>
