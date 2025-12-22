@@ -6,14 +6,16 @@ import { TradingChart } from '@/components/TradingChart';
 import { ImportSheet } from '@/components/ImportSheet';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
-import { Trade, LivePrice, TradeSource } from '@/types/portfolio';
+import { Trade, LivePrice } from '@/types/portfolio';
 import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
-import { fetchTrades, addTrades, deleteTradesBySymbol, deleteTradesBySource, migrateSymbolsToTickers } from '@/services/localDbService';
+import { getTrades, addTrades, deleteTradesByTicker, getExistingTransactionIds } from '@/services/firestoreService';
+import { ensureAuth } from '@/lib/auth';
+import { parseCSV, filterDuplicates } from '@/services/importService';
 
-const REFRESH_INTERVAL = 30000; // 30 seconds
+const REFRESH_INTERVAL = 30000;
 
 export default function Holdings() {
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -24,24 +26,19 @@ export default function Holdings() {
   const { toast } = useToast();
   const refreshCleanupRef = useRef<(() => void) | null>(null);
 
-  // Load trades from IndexedDB on mount (with migration)
+  // Load trades from Firestore on mount
   useEffect(() => {
     const loadTrades = async () => {
       try {
-        // First, migrate any existing trades with company names to tickers
-        const migrationResult = await migrateSymbolsToTickers();
-        if (migrationResult.migrated > 0) {
-          console.log(`Migrated ${migrationResult.migrated} trades to proper ticker symbols`);
-        }
-        
-        const localTrades = await fetchTrades();
-        setTrades(localTrades);
-        console.log('Loaded trades from IndexedDB:', localTrades.length);
+        await ensureAuth();
+        const firestoreTrades = await getTrades();
+        setTrades(firestoreTrades);
+        console.log('Loaded trades from Firestore:', firestoreTrades.length);
       } catch (error) {
-        console.error('Error loading trades from IndexedDB:', error);
+        console.error('Error loading trades:', error);
         toast({
           title: "Database error",
-          description: "Could not load trades from local storage.",
+          description: "Could not load trades from database.",
           variant: "destructive",
         });
       } finally {
@@ -51,18 +48,17 @@ export default function Holdings() {
     loadTrades();
   }, [toast]);
 
-  // Get all stock symbols
-  const symbols = useMemo(() => {
-    const stockTrades = trades.filter(t => t.assetType === 'stock');
-    return [...new Set(stockTrades.map(t => t.symbol))];
+  // Get all stock tickers
+  const tickers = useMemo(() => {
+    return [...new Set(trades.map(t => t.ticker))];
   }, [trades]);
 
   // Handle price updates
   const handlePriceUpdate = useCallback((newPrices: Map<string, LivePrice>) => {
     setPrices(prev => {
       const updated = new Map(prev);
-      newPrices.forEach((price, symbol) => {
-        updated.set(symbol, price);
+      newPrices.forEach((price, ticker) => {
+        updated.set(ticker, price);
       });
       return updated;
     });
@@ -70,14 +66,12 @@ export default function Holdings() {
     setIsLoading(false);
   }, []);
 
-  // Initialize and start live price refresh
+  // Initialize prices
   useEffect(() => {
-    // Initial prices from mock data
     const initialPrices = new Map<string, LivePrice>();
-    Object.entries(mockPrices).forEach(([symbol, price]) => {
-      initialPrices.set(symbol, {
-        symbol,
-        assetType: 'stock',
+    Object.entries(mockPrices).forEach(([ticker, price]) => {
+      initialPrices.set(ticker, {
+        ticker,
         price,
         timestamp: Date.now(),
         source: 'mock',
@@ -88,18 +82,16 @@ export default function Holdings() {
     setLastUpdate(new Date());
   }, []);
 
-  // Start auto-refresh when symbols change
+  // Start auto-refresh when tickers change
   useEffect(() => {
-    if (symbols.length === 0) return;
+    if (tickers.length === 0) return;
 
-    // Cleanup previous refresh
     if (refreshCleanupRef.current) {
       refreshCleanupRef.current();
     }
 
-    // Start new refresh
     refreshCleanupRef.current = startPriceRefresh(
-      symbols,
+      tickers,
       'stock',
       handlePriceUpdate,
       REFRESH_INTERVAL
@@ -110,54 +102,81 @@ export default function Holdings() {
         refreshCleanupRef.current();
       }
     };
-  }, [symbols, handlePriceUpdate]);
+  }, [tickers, handlePriceUpdate]);
 
-  // Calculate global portfolio total from ALL trades
+  // Calculate global portfolio total
   const globalPortfolioTotal = useMemo(() => {
     return calculateGlobalPortfolioTotal(trades, prices);
   }, [trades, prices]);
 
-  // Calculate holdings with global total for allocation
+  // Calculate holdings
   const holdings = useMemo(() => {
-    return calculateHoldings(trades, prices, 'stock', globalPortfolioTotal);
+    return calculateHoldings(trades, prices, globalPortfolioTotal);
   }, [trades, prices, globalPortfolioTotal]);
 
-  // Handle trade imports - with source replacement (no merging)
-  const handleImport = async (newTrades: Trade[], source?: TradeSource) => {
+  // Handle CSV import
+  const handleImport = async (csvContent: string) => {
     try {
-      // If source is provided, delete ALL existing trades from that source first
-      if (source) {
-        await deleteTradesBySource(source);
-        // Update local state to remove those trades
-        setTrades(prev => prev.filter(t => t.source !== source));
-      }
+      const result = parseCSV(csvContent, 'csv');
       
-      // Add new trades
+      if (result.errors.length > 0) {
+        toast({
+          title: "Import warnings",
+          description: result.errors.join(', '),
+          variant: "destructive",
+        });
+      }
+
+      if (result.trades.length === 0) {
+        toast({
+          title: "No trades found",
+          description: "The CSV file contained no valid trades.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Filter duplicates
+      const existingIds = await getExistingTransactionIds();
+      const newTrades = filterDuplicates(result.trades, existingIds);
+
+      if (newTrades.length === 0) {
+        toast({
+          title: "No new trades",
+          description: "All trades in the file already exist.",
+        });
+        return;
+      }
+
+      // Add to Firestore
       await addTrades(newTrades);
-      setTrades(prev => [...prev.filter(t => source ? t.source !== source : true), ...newTrades]);
+      
+      // Reload trades
+      const updatedTrades = await getTrades();
+      setTrades(updatedTrades);
       
       toast({
         title: "Trades imported",
-        description: `${newTrades.length} trades saved locally.`,
+        description: `${newTrades.length} trades saved. ${result.trades.length - newTrades.length} duplicates skipped.`,
       });
     } catch (error) {
-      console.error('Error saving trades:', error);
+      console.error('Error importing trades:', error);
       toast({
-        title: "Save failed",
-        description: "Could not save trades to local storage.",
+        title: "Import failed",
+        description: "Could not import trades.",
         variant: "destructive",
       });
     }
   };
 
   // Handle delete holdings
-  const handleDeleteHoldings = async (symbols: string[]) => {
+  const handleDeleteHoldings = async (tickersToDelete: string[]) => {
     try {
-      await Promise.all(symbols.map(symbol => deleteTradesBySymbol(symbol)));
-      setTrades(prev => prev.filter(t => !symbols.includes(t.symbol)));
+      await Promise.all(tickersToDelete.map(ticker => deleteTradesByTicker(ticker)));
+      setTrades(prev => prev.filter(t => !tickersToDelete.includes(t.ticker)));
       toast({
         title: "Holdings deleted",
-        description: `${symbols.length} holding(s) removed.`,
+        description: `${tickersToDelete.length} holding(s) removed.`,
       });
     } catch (error) {
       console.error('Error deleting holdings:', error);
@@ -171,17 +190,13 @@ export default function Holdings() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - Simplified */}
       <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold">Portfolio</h1>
             
             <div className="flex items-center gap-1">
-              <ImportSheet
-                trades={trades}
-                onImport={handleImport}
-              />
+              <ImportSheet onImport={handleImport} />
               <Link to="/settings">
                 <Button variant="ghost" size="icon" className="h-9 w-9">
                   <Settings className="h-5 w-5" />
@@ -192,18 +207,14 @@ export default function Holdings() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="safe-area-bottom">
-        {/* Chart and Summary - contained */}
         <div className="container mx-auto px-4 py-5 space-y-5">
-          {/* Trading Chart */}
           <TradingChart 
             holdings={holdings} 
             trades={trades}
             isLoading={isLoading}
           />
           
-          {/* Live Indicator */}
           {lastUpdate && (
             <div className="flex items-center justify-center gap-1.5 -mt-3">
               <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse" />
@@ -213,11 +224,9 @@ export default function Holdings() {
             </div>
           )}
 
-          {/* Portfolio Summary */}
           <PortfolioSummary holdings={holdings} />
         </div>
 
-        {/* Holdings Table - full width on desktop */}
         <div className="w-full px-4 lg:px-6 xl:px-8 pb-6">
           <HoldingsTable 
             holdings={holdings} 
