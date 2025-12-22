@@ -1,36 +1,83 @@
-// Types for the portfolio tracking app
+// Types for the stock portfolio tracking app
+// STOCKS ONLY - no crypto
 
-export type AssetType = 'stock' | 'crypto';
-export type TradeSide = 'buy' | 'sell';
-export type TradeSource = 'manual' | 'trading212' | 'ibkr' | 'binance' | 'gateio';
+import { Timestamp } from 'firebase/firestore';
 
+// Trade source types
+export type TradeSource = 'csv' | 'manual';
+
+// Trade action types (matching broker CSV)
+export type TradeAction = 'BUY' | 'SELL';
+
+/**
+ * Firestore Trade Document Schema
+ * Exactly matches the broker CSV structure
+ */
+export interface FirestoreTrade {
+  // Firestore document ID (auto-generated)
+  id: string;
+  
+  // User scoping
+  userId: string;
+  
+  // Broker identifiers
+  brokerTransactionId: string;  // CSV: ID (for duplicate detection)
+  
+  // Trade data
+  action: TradeAction;          // CSV: Action ("Market buy" → "BUY")
+  timestamp: string;            // CSV: Time (ISO string)
+  
+  // Security info
+  isin: string;                 // CSV: ISIN
+  ticker: string;               // CSV: Ticker
+  name: string;                 // CSV: Name
+  
+  // Quantities & Prices
+  shares: number;               // CSV: No. of shares
+  pricePerShare: number;        // CSV: Price / share
+  priceCurrency: string;        // CSV: Currency (Price / share)
+  
+  // Totals
+  totalValue: number;           // CSV: Total
+  totalCurrency: string;        // CSV: Currency (Total)
+  exchangeRate: number;         // CSV: Exchange rate
+  
+  // Metadata
+  source: TradeSource;
+  createdAt: Timestamp | null;  // Firestore serverTimestamp()
+}
+
+/**
+ * Trade for local state (with Date instead of Timestamp)
+ */
 export interface Trade {
   id: string;
-  symbol: string;
-  assetType: AssetType;
-  side: TradeSide;
-  quantity: number;
-  price: number;
-  fee: number;
-  date: Date;
+  userId: string;
+  brokerTransactionId: string;
+  action: TradeAction;
+  timestamp: string;
+  isin: string;
+  ticker: string;
+  name: string;
+  shares: number;
+  pricePerShare: number;
+  priceCurrency: string;
+  totalValue: number;
+  totalCurrency: string;
+  exchangeRate: number;
   source: TradeSource;
+  createdAt: Date | null;
 }
 
-export interface Portfolio {
-  id: string;
-  name: string;
-  baseCurrency: string;
-  createdAt: Date;
-  trades: Trade[];
-}
-
+/**
+ * Holding representation for UI
+ */
 export interface Holding {
-  symbol: string;
+  ticker: string;
   name: string;
-  assetType: AssetType;
   isin?: string;
   logoUrl?: string;
-  quantity: number;
+  shares: number;
   averageBuyPrice: number;
   investedAmount: number;
   currentPrice: number;
@@ -39,13 +86,13 @@ export interface Holding {
   unrealizedPLPercent: number;
   holdingPeriodDays: number;
   allocationPercent: number;
-  cumulativeCashflowPerShare: number;
-  valuePerShare: number;
 }
 
+/**
+ * Live price data
+ */
 export interface LivePrice {
-  symbol: string;
-  assetType: AssetType;
+  ticker: string;
   price: number;
   previousClose?: number;
   change?: number;
@@ -54,14 +101,9 @@ export interface LivePrice {
   source: string;
 }
 
-export interface ExchangeConnection {
-  id: string;
-  exchange: 'binance' | 'gateio';
-  apiKey: string;
-  isConnected: boolean;
-  lastSync?: Date;
-}
-
+/**
+ * Import result summary
+ */
 export interface ImportResult {
   tradesAdded: number;
   tradesSkipped: number;
