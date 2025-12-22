@@ -1,19 +1,17 @@
 // Types for the stock portfolio tracking app
 // STOCKS ONLY - no crypto
 
-import { Timestamp } from 'firebase/firestore';
-
 // Trade source types
-export type TradeSource = 'csv' | 'manual';
+export type TradeSource = 'csv' | 'manual' | 'trading212' | 'ibkr';
 
 // Trade action types (matching broker CSV)
 export type TradeAction = 'BUY' | 'SELL';
 
 /**
- * Firestore Trade Document Schema
+ * Trade interface for local state and Firestore
  * Exactly matches the broker CSV structure
  */
-export interface FirestoreTrade {
+export interface Trade {
   // Firestore document ID (auto-generated)
   id: string;
   
@@ -44,29 +42,7 @@ export interface FirestoreTrade {
   
   // Metadata
   source: TradeSource;
-  createdAt: Timestamp | null;  // Firestore serverTimestamp()
-}
-
-/**
- * Trade for local state (with Date instead of Timestamp)
- */
-export interface Trade {
-  id: string;
-  userId: string;
-  brokerTransactionId: string;
-  action: TradeAction;
-  timestamp: string;
-  isin: string;
-  ticker: string;
-  name: string;
-  shares: number;
-  pricePerShare: number;
-  priceCurrency: string;
-  totalValue: number;
-  totalCurrency: string;
-  exchangeRate: number;
-  source: TradeSource;
-  createdAt: Date | null;
+  createdAt: Date | null;       // Firestore serverTimestamp()
 }
 
 /**
@@ -105,7 +81,17 @@ export interface LivePrice {
  * Import result summary
  */
 export interface ImportResult {
-  tradesAdded: number;
-  tradesSkipped: number;
+  trades: Trade[];
   errors: string[];
+  diagnostics: ImportDiagnostics;
+}
+
+export interface ImportDiagnostics {
+  totalRows: number;
+  tradesImported: number;
+  rowsSkipped: number;
+  skipReasons: Record<string, number>;
+  warnings: string[];
+  totalInvested: number;
+  uniqueSymbols: string[];
 }

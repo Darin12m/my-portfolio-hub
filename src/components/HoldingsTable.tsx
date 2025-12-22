@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Holding } from '@/types/portfolio';
+import type { Holding } from '@/types/portfolio';
 import { formatCurrency, formatPercent, formatQuantity } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
@@ -18,23 +18,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-type SortField = 'name' | 'quantity' | 'cashflow' | 'value' | 'pl' | 'allocation';
+type SortField = 'name' | 'shares' | 'cashflow' | 'value' | 'pl' | 'allocation';
 type SortDirection = 'asc' | 'desc';
 
 interface HoldingsTableProps {
   holdings: Holding[];
   isLoading?: boolean;
-  onDeleteHoldings?: (symbols: string[]) => void;
+  onDeleteHoldings?: (tickers: string[]) => void;
 }
 
 export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: HoldingsTableProps) {
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>('allocation');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [selectedSymbols, setSelectedSymbols] = useState<Set<string>>(new Set());
+  const [selectedTickers, setSelectedTickers] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const isEditMode = selectedSymbols.size > 0;
+  const isEditMode = selectedTickers.size > 0;
 
   const handleSort = (field: SortField) => {
     if (isEditMode) return;
@@ -53,8 +53,8 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
         case 'name':
           comparison = a.name.localeCompare(b.name);
           break;
-        case 'quantity':
-          comparison = a.quantity - b.quantity;
+        case 'shares':
+          comparison = a.shares - b.shares;
           break;
         case 'cashflow':
           comparison = a.investedAmount - b.investedAmount;
@@ -82,14 +82,14 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       : <ArrowDown className="h-3 w-3 text-primary" />;
   };
 
-  const toggleSelection = (symbol: string, e: React.MouseEvent) => {
+  const toggleSelection = (ticker: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedSymbols(prev => {
+    setSelectedTickers(prev => {
       const next = new Set(prev);
-      if (next.has(symbol)) {
-        next.delete(symbol);
+      if (next.has(ticker)) {
+        next.delete(ticker);
       } else {
-        next.add(symbol);
+        next.add(ticker);
       }
       return next;
     });
@@ -97,15 +97,15 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   const handleDelete = () => {
     if (onDeleteHoldings) {
-      onDeleteHoldings(Array.from(selectedSymbols));
+      onDeleteHoldings(Array.from(selectedTickers));
     }
-    setSelectedSymbols(new Set());
+    setSelectedTickers(new Set());
     setShowDeleteDialog(false);
   };
 
   const handleRowClick = (holding: Holding) => {
     if (!isEditMode) {
-      navigate(`/asset/${holding.symbol}`);
+      navigate(`/asset/${holding.ticker}`);
     }
   };
 
@@ -139,7 +139,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       {/* Table Header with count/selection */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/30 bg-muted/20">
         <span className="text-xs font-medium text-muted-foreground">
-          {isEditMode ? `${selectedSymbols.size} selected` : `${holdings.length} Holdings`}
+          {isEditMode ? `${selectedTickers.size} selected` : `${holdings.length} Holdings`}
         </span>
         {isEditMode && (
           <Button 
@@ -157,7 +157,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       {/* Scrollable Table Container */}
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
-          {/* Table Header Row - Simplified single line headers */}
+          {/* Table Header Row */}
           <div className="grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] bg-muted/10">
             {/* Security Header */}
             <div className="py-2 px-3">
@@ -171,10 +171,10 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
               </button>
             </div>
 
-            {/* Position Header */}
+            {/* Shares Header */}
             <div className="py-2 px-2 text-center">
               <button
-                onClick={() => handleSort('quantity')}
+                onClick={() => handleSort('shares')}
                 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
@@ -231,18 +231,18 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
           <div className="divide-y divide-border/20">
             {sortedHoldings.map((holding) => (
               <div
-                key={holding.symbol}
+                key={holding.ticker}
                 onClick={() => handleRowClick(holding)}
                 className={cn(
                   "grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] cursor-pointer",
                   "transition-colors duration-100",
-                  selectedSymbols.has(holding.symbol) && "bg-primary/5",
+                  selectedTickers.has(holding.ticker) && "bg-primary/5",
                   !isEditMode && "hover:bg-muted/30"
                 )}
               >
                 {/* Security Cell */}
                 <div className="py-2.5 px-3 relative overflow-hidden">
-                  {/* Allocation Bar - subtle */}
+                  {/* Allocation Bar */}
                   <div 
                     className="absolute inset-y-0.5 left-0 right-0 pointer-events-none"
                     aria-hidden="true"
@@ -258,11 +258,11 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
                   {/* Content */}
                   <div className="flex items-center gap-2 relative z-10">
-                    {/* Checkbox on long-press / hover in edit mode */}
+                    {/* Checkbox */}
                     <Checkbox
-                      checked={selectedSymbols.has(holding.symbol)}
+                      checked={selectedTickers.has(holding.ticker)}
                       onCheckedChange={() => {}}
-                      onClick={(e) => toggleSelection(holding.symbol, e)}
+                      onClick={(e) => toggleSelection(holding.ticker, e)}
                       className={cn(
                         "flex-shrink-0 transition-opacity",
                         isEditMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
@@ -271,16 +271,15 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                     
                     {/* Logo */}
                     <AssetLogo
-                      symbol={holding.symbol}
+                      ticker={holding.ticker}
                       name={holding.name}
-                      assetType={holding.assetType}
                       size="sm"
                     />
                     
-                    {/* Name & Symbol */}
+                    {/* Name & Ticker */}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate leading-tight">
-                        {holding.symbol}
+                        {holding.ticker}
                       </p>
                       <p className="text-[10px] text-muted-foreground truncate">
                         {holding.name}
@@ -291,7 +290,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
                 {/* Shares */}
                 <div className="py-2.5 px-2 text-center flex items-center justify-center">
-                  <p className="text-sm font-medium">{formatQuantity(holding.quantity)}</p>
+                  <p className="text-sm font-medium">{formatQuantity(holding.shares)}</p>
                 </div>
 
                 {/* Avg Cost */}
@@ -338,7 +337,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Holdings?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete {selectedSymbols.size} holding{selectedSymbols.size > 1 ? 's' : ''} and all related trades. This action cannot be undone.
+              This will delete {selectedTickers.size} holding{selectedTickers.size > 1 ? 's' : ''} and all related trades. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

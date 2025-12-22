@@ -9,8 +9,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Upload, FileText, CheckCircle2, AlertTriangle, Loader2, Info } from 'lucide-react';
-import { parseFlexibleCSV, parseIBKRCSV, ParseResult } from '@/services/importService';
-import { Trade, TradeSource } from '@/types/portfolio';
+import { parseFlexibleCSV, parseIBKRCSV } from '@/services/importService';
+import type { Trade, TradeSource, ImportResult } from '@/types/portfolio';
 import { cn } from '@/lib/utils';
 
 type ImportSource = 'trading212' | 'ibkr';
@@ -18,7 +18,7 @@ type ImportSource = 'trading212' | 'ibkr';
 interface ImportModalProps {
   source: ImportSource;
   existingTrades: Trade[];
-  onImport: (trades: Trade[], source: TradeSource) => void;
+  onImport: (csvContent: string) => void;
   fullWidth?: boolean;
 }
 
@@ -26,20 +26,21 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [parseResult, setParseResult] = useState<ImportResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'result'>('upload');
   const [importedCount, setImportedCount] = useState(0);
+  const [csvContent, setCsvContent] = useState<string>('');
 
   const sourceConfig = {
     trading212: {
       name: 'Trading212',
-      description: 'Import your trades from Trading212 CSV export. This will REPLACE all existing Trading212 trades.',
+      description: 'Import your trades from Trading212 CSV export.',
       parser: (content: string) => parseFlexibleCSV(content, 'trading212'),
     },
     ibkr: {
       name: 'Interactive Brokers',
-      description: 'Import your trades from IBKR Flex Query CSV export. This will REPLACE all existing IBKR trades.',
+      description: 'Import your trades from IBKR Flex Query CSV export.',
       parser: (content: string) => parseIBKRCSV(content),
     },
   };
@@ -77,6 +78,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
 
     try {
       const content = await file.text();
+      setCsvContent(content);
       const result = config.parser(content);
       setParseResult(result);
       setStep('preview');
@@ -84,7 +86,15 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
       setParseResult({
         trades: [],
         errors: ['Failed to read file'],
-        diagnostics: { totalRows: 0, tradesImported: 0, rowsSkipped: 0, skipReasons: {}, warnings: [], totalInvested: 0, uniqueSymbols: [] },
+        diagnostics: { 
+          totalRows: 0, 
+          tradesImported: 0, 
+          rowsSkipped: 0, 
+          skipReasons: {}, 
+          warnings: [], 
+          totalInvested: 0, 
+          uniqueSymbols: [] 
+        },
       });
       setStep('preview');
     } finally {
@@ -93,10 +103,10 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
   };
 
   const handleImport = () => {
-    if (!parseResult) return;
+    if (!parseResult || !csvContent) return;
     
     setImportedCount(parseResult.trades.length);
-    onImport(parseResult.trades, source);
+    onImport(csvContent);
     setStep('result');
   };
 
@@ -105,6 +115,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
     setParseResult(null);
     setImportedCount(0);
     setStep('upload');
+    setCsvContent('');
   };
 
   const handleClose = () => {
@@ -186,7 +197,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                   <span className="font-semibold text-primary">{parseResult.diagnostics.tradesImported}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Unique symbols:</span>
+                  <span className="text-muted-foreground">Unique tickers:</span>
                   <span className="font-medium">{parseResult.diagnostics.uniqueSymbols.length}</span>
                 </div>
                 <div className="flex justify-between">
@@ -215,7 +226,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                 <div className="flex items-start gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/20">
                   <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {existingSourceTradeCount} existing {config.name} trades will be replaced
+                    {existingSourceTradeCount} existing {config.name} trades found
                   </p>
                 </div>
               )}
@@ -226,7 +237,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                   <div className="text-xs text-destructive">
                     <span className="font-medium">No valid trades detected</span>
                     <p className="mt-1 opacity-80">
-                      Make sure your CSV contains trade data with columns for Action, Symbol/Ticker, Quantity, and Price.
+                      Make sure your CSV contains trade data with columns for Action, Ticker, No. of shares, and Price.
                     </p>
                   </div>
                 </div>
@@ -239,21 +250,21 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr>
-                      <th className="px-2 py-1 text-left font-medium">Symbol</th>
-                      <th className="px-2 py-1 text-left font-medium">Side</th>
-                      <th className="px-2 py-1 text-right font-medium">Qty</th>
+                      <th className="px-2 py-1 text-left font-medium">Ticker</th>
+                      <th className="px-2 py-1 text-left font-medium">Action</th>
+                      <th className="px-2 py-1 text-right font-medium">Shares</th>
                       <th className="px-2 py-1 text-right font-medium">Price</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {parseResult.trades.slice(0, 5).map((trade, idx) => (
                       <tr key={idx}>
-                        <td className="px-2 py-1 font-medium">{trade.symbol}</td>
-                        <td className={cn("px-2 py-1", trade.side === 'buy' ? 'text-profit' : 'text-loss')}>
-                          {trade.side.toUpperCase()}
+                        <td className="px-2 py-1 font-medium">{trade.ticker}</td>
+                        <td className={cn("px-2 py-1", trade.action === 'BUY' ? 'text-profit' : 'text-loss')}>
+                          {trade.action}
                         </td>
-                        <td className="px-2 py-1 text-right font-mono">{trade.quantity.toFixed(8)}</td>
-                        <td className="px-2 py-1 text-right">${trade.price.toFixed(4)}</td>
+                        <td className="px-2 py-1 text-right font-mono">{trade.shares.toFixed(4)}</td>
+                        <td className="px-2 py-1 text-right">${trade.pricePerShare.toFixed(4)}</td>
                       </tr>
                     ))}
                     {parseResult.trades.length > 5 && (

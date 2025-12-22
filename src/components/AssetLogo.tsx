@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { getAssetLogoUrl, markLogoFailed, hasLogoFailed } from '@/services/logoService';
+import { getStockLogoUrl, markLogoFailed, hasLogoFailed } from '@/services/logoService';
 
 interface AssetLogoProps {
-  symbol: string;
+  ticker: string;
   name: string;
-  assetType: 'stock' | 'crypto';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 export function AssetLogo({ 
-  symbol, 
+  ticker, 
   name, 
-  assetType, 
   size = 'md',
   className 
 }: AssetLogoProps) {
@@ -23,38 +21,30 @@ export function AssetLogo({
 
   // Get initials for fallback
   const getInitials = () => {
-    // For crypto, use first 2 chars of symbol
-    if (assetType === 'crypto') {
-      return symbol.substring(0, 2).toUpperCase();
-    }
-    // For stocks, try to get meaningful initials
-    const words = name.split(/\s+/);
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return symbol.substring(0, 2).toUpperCase();
+    // Use first 2 chars of ticker
+    return ticker.substring(0, 2).toUpperCase();
   };
 
   useEffect(() => {
     // Check if logo previously failed
-    if (hasLogoFailed(symbol)) {
+    if (hasLogoFailed(ticker)) {
       setHasError(true);
       setIsLoading(false);
       return;
     }
 
-    // Get logo URL
-    const url = getAssetLogoUrl(symbol, assetType);
+    // Get logo URL (stocks only)
+    const url = getStockLogoUrl(ticker);
     if (url) {
       setLogoUrl(url);
     } else {
       setHasError(true);
     }
     setIsLoading(false);
-  }, [symbol, assetType]);
+  }, [ticker]);
 
   const handleImageError = () => {
-    markLogoFailed(symbol);
+    markLogoFailed(ticker);
     setHasError(true);
   };
 

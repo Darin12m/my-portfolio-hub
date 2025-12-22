@@ -6,8 +6,9 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceL
 import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, formatCurrency, formatPercent, formatQuantity } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
-import { LivePrice, Trade } from '@/types/portfolio';
-import { fetchTrades } from '@/services/localDbService';
+import type { LivePrice, Trade } from '@/types/portfolio';
+import { getTrades } from '@/services/firestoreService';
+import { ensureAuth } from '@/lib/auth';
 
 type TimeRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'All';
 
@@ -101,19 +102,27 @@ export default function AssetDetail() {
   const [timeRange, setTimeRange] = useState<TimeRange>('1D');
   const [trades, setTrades] = useState<Trade[]>([]);
 
-  // Load trades from IndexedDB
+  // Load trades from Firestore
   useEffect(() => {
-    fetchTrades().then(setTrades).catch(console.error);
+    const loadTrades = async () => {
+      try {
+        await ensureAuth();
+        const firestoreTrades = await getTrades();
+        setTrades(firestoreTrades);
+      } catch (error) {
+        console.error('Error loading trades:', error);
+      }
+    };
+    loadTrades();
   }, []);
 
   const currentPrice = symbol ? mockPrices[symbol] || 0 : 0;
   
   const prices = useMemo(() => {
     const priceMap = new Map<string, LivePrice>();
-    Object.entries(mockPrices).forEach(([sym, price]) => {
-      priceMap.set(sym, {
-        symbol: sym,
-        assetType: ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'AVAX'].includes(sym) ? 'crypto' : 'stock',
+    Object.entries(mockPrices).forEach(([ticker, price]) => {
+      priceMap.set(ticker, {
+        ticker,
         price,
         timestamp: Date.now(),
         source: 'mock',
@@ -124,9 +133,8 @@ export default function AssetDetail() {
 
   const holding = useMemo(() => {
     if (!symbol || trades.length === 0) return null;
-    const assetType = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'AVAX'].includes(symbol) ? 'crypto' : 'stock';
-    const holdings = calculateHoldings(trades, prices, assetType);
-    return holdings.find(h => h.symbol === symbol) || null;
+    const holdings = calculateHoldings(trades, prices);
+    return holdings.find(h => h.ticker === symbol) || null;
   }, [symbol, prices, trades]);
 
   const chartData = useMemo(() => {
@@ -142,8 +150,8 @@ export default function AssetDetail() {
   const maxValue = Math.max(...chartData.map(d => d.value), baseline);
   const padding = (maxValue - minValue) * 0.12;
 
-  // Mock stats
-  const stats = holding?.assetType === 'stock' ? {
+  // Stock stats
+  const stats = {
     prevClose: formatCurrency(currentPrice * 0.995),
     dayRange: `${formatCurrency(currentPrice * 0.98)} - ${formatCurrency(currentPrice * 1.02)}`,
     yearRange: `${formatCurrency(currentPrice * 0.65)} - ${formatCurrency(currentPrice * 1.2)}`,
@@ -153,15 +161,6 @@ export default function AssetDetail() {
     peRatio: '28.5',
     eps: formatCurrency(currentPrice / 28.5),
     earningsDate: 'Jan 25, 2025',
-  } : {
-    prevClose: formatCurrency(currentPrice * 0.995),
-    dayRange: `${formatCurrency(currentPrice * 0.97)} - ${formatCurrency(currentPrice * 1.03)}`,
-    yearRange: `${formatCurrency(currentPrice * 0.4)} - ${formatCurrency(currentPrice * 1.8)}`,
-    marketCap: '$1.3T',
-    volume: '$28.5B',
-    avgVolume: '$25.1B',
-    circulatingSupply: '19.8M',
-    totalSupply: '21M',
   };
 
   if (!holding) {
@@ -199,7 +198,7 @@ export default function AssetDetail() {
               </div>
               <div>
                 <h1 className="text-base font-semibold leading-tight">{holding.name}</h1>
-                <p className="text-xs text-muted-foreground">{symbol} • {holding.assetType === 'stock' ? 'NASDAQ' : 'Crypto'}</p>
+                <p className="text-xs text-muted-foreground">{symbol} • STOCK</p>
               </div>
             </div>
           </div>
@@ -365,34 +364,18 @@ export default function AssetDetail() {
               <span className="text-muted-foreground">Avg. Volume</span>
               <span className="font-medium">{stats.avgVolume}</span>
             </div>
-            {holding.assetType === 'stock' && (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">P/E Ratio</span>
-                  <span className="font-medium">{(stats as any).peRatio}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">EPS</span>
-                  <span className="font-medium">{(stats as any).eps}</span>
-                </div>
-                <div className="flex justify-between col-span-2">
-                  <span className="text-muted-foreground">Earnings Date</span>
-                  <span className="font-medium">{(stats as any).earningsDate}</span>
-                </div>
-              </>
-            )}
-            {holding.assetType === 'crypto' && (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Circulating Supply</span>
-                  <span className="font-medium">{(stats as any).circulatingSupply}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Supply</span>
-                  <span className="font-medium">{(stats as any).totalSupply}</span>
-                </div>
-              </>
-            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">P/E Ratio</span>
+              <span className="font-medium">{stats.peRatio}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">EPS</span>
+              <span className="font-medium">{stats.eps}</span>
+            </div>
+            <div className="flex justify-between col-span-2">
+              <span className="text-muted-foreground">Earnings Date</span>
+              <span className="font-medium">{stats.earningsDate}</span>
+            </div>
           </div>
         </div>
 
@@ -402,7 +385,7 @@ export default function AssetDetail() {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Shares</span>
-              <span className="font-medium">{formatQuantity(holding.quantity)}</span>
+              <span className="font-medium">{formatQuantity(holding.shares)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Avg Cost</span>
@@ -423,27 +406,27 @@ export default function AssetDetail() {
               <span className="font-medium">{holding.allocationPercent.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Days Held</span>
-              <span className="font-medium">{holding.holdingPeriodDays}</span>
+              <span className="text-muted-foreground">Holding Period</span>
+              <span className="font-medium">{holding.holdingPeriodDays} days</span>
             </div>
           </div>
         </div>
 
         {/* News Section */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
+            <Button variant="ghost" size="sm" className="text-xs h-7">
+              View All <ExternalLink className="h-3 w-3 ml-1" />
+            </Button>
+          </div>
           <div className="space-y-3">
             {mockNews.map((news) => (
-              <div key={news.id} className="group cursor-pointer">
-                <p className="text-sm font-medium leading-snug group-hover:text-primary transition-colors">
-                  {news.headline}
+              <div key={news.id} className="border-b border-border/50 pb-3 last:border-0 last:pb-0">
+                <p className="text-sm font-medium leading-tight">{news.headline}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {news.source} • {news.time}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-muted-foreground">{news.source}</span>
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground">{news.time}</span>
-                  <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
               </div>
             ))}
           </div>
