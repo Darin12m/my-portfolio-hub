@@ -112,6 +112,20 @@ export function normalizeToTicker(symbol: string): string {
 
 // ==================== COLUMN ALIASES ====================
 
+// Trading212 specific column names (exact matches prioritized)
+const TRADING212_COLUMNS = {
+  action: 'action',
+  ticker: 'ticker',
+  name: 'name',
+  isin: 'isin',
+  quantity: 'no. of shares',
+  price: 'price / share',
+  total: 'total',
+  date: 'time',
+  currency: 'currency (price / share)',
+  resultCurrency: 'currency (result)',
+};
+
 const COLUMN_ALIASES = {
   // Action/Type column
   action: [
@@ -136,14 +150,14 @@ const COLUMN_ALIASES = {
     'cusip', 'sedol', 'figi'
   ],
   
-  // Quantity
+  // Quantity - Trading212 uses "No. of shares"
   quantity: [
-    'no. of shares', 'quantity', 'shares', 'units', 'amount',
+    'no. of shares', 'quantity', 'shares', 'units',
     'qty', 'size', 'volume', 'no of shares', 'num shares',
     'share quantity', 'filled qty', 'executed qty'
   ],
   
-  // Price
+  // Price - Trading212 uses "Price / share"
   price: [
     'price / share', 'price', 'execution price', 'unit price',
     'share price', 'avg price', 'fill price', 'price per share',
@@ -152,7 +166,7 @@ const COLUMN_ALIASES = {
   
   // Total value
   total: [
-    'total', 'value', 'total value', 'amount', 'net amount',
+    'total', 'value', 'total value', 'net amount',
     'gross amount', 'total cost', 'proceeds', 'cost'
   ],
   
@@ -165,8 +179,8 @@ const COLUMN_ALIASES = {
   
   // Currency
   currency: [
-    'currency', 'base currency', 'ccy', 'currency code',
-    'trade currency', 'settlement currency'
+    'currency (price / share)', 'currency', 'base currency', 'ccy', 'currency code',
+    'trade currency', 'settlement currency', 'currency (result)'
   ],
   
   // Fees
@@ -453,6 +467,8 @@ export interface ImportDiagnostics {
   rowsSkipped: number;
   skipReasons: Record<string, number>;
   warnings: string[];
+  totalInvested: number;
+  uniqueSymbols: string[];
 }
 
 export interface ParseResult {
@@ -492,6 +508,8 @@ export function parseFlexibleCSV(
           rowsSkipped: 0,
           skipReasons,
           warnings,
+          totalInvested: 0,
+          uniqueSymbols: [],
         },
       };
     }
@@ -500,9 +518,19 @@ export function parseFlexibleCSV(
     const headers = parseCSVLine(lines[0]);
     const columns = detectColumns(headers);
 
-    // Log detected columns for debugging
-    console.log('Detected columns:', columns);
+    // Enhanced debugging output
+    console.log('=== Trading212 Import Debug ===');
     console.log('Headers:', headers);
+    console.log('Detected columns:', {
+      action: columns.action !== null ? `[${columns.action}] "${headers[columns.action]}"` : 'NOT FOUND',
+      ticker: columns.ticker !== null ? `[${columns.ticker}] "${headers[columns.ticker]}"` : 'NOT FOUND',
+      instrument: columns.instrument !== null ? `[${columns.instrument}] "${headers[columns.instrument]}"` : 'NOT FOUND',
+      isin: columns.isin !== null ? `[${columns.isin}] "${headers[columns.isin]}"` : 'NOT FOUND',
+      quantity: columns.quantity !== null ? `[${columns.quantity}] "${headers[columns.quantity]}"` : 'NOT FOUND',
+      price: columns.price !== null ? `[${columns.price}] "${headers[columns.price]}"` : 'NOT FOUND',
+      total: columns.total !== null ? `[${columns.total}] "${headers[columns.total]}"` : 'NOT FOUND',
+      date: columns.date !== null ? `[${columns.date}] "${headers[columns.date]}"` : 'NOT FOUND',
+    });
 
     // Check for minimum required columns
     const hasSymbolColumn = columns.ticker !== null || columns.instrument !== null || columns.isin !== null;
@@ -519,6 +547,8 @@ export function parseFlexibleCSV(
           rowsSkipped: lines.length - 1,
           skipReasons,
           warnings,
+          totalInvested: 0,
+          uniqueSymbols: [],
         },
       };
     }
@@ -654,10 +684,29 @@ export function parseFlexibleCSV(
       warnings.push(`0 trades detected from ${dataRowCount} rows. Check if the CSV format is supported.`);
     }
 
-    // Log summary
-    console.log(`Import complete: ${trades.length} trades from ${dataRowCount} rows`);
-    Object.entries(skipReasons).forEach(([reason, count]) => {
-      console.log(`  Skipped: ${reason} (${count})`);
+    // Calculate totals for diagnostics
+    const totalInvested = trades.reduce((sum, t) => {
+      if (t.side === 'buy') {
+        return sum + (t.quantity * t.price);
+      }
+      return sum;
+    }, 0);
+    
+    const uniqueSymbols = [...new Set(trades.map(t => t.symbol))];
+
+    // Enhanced summary logging
+    console.log('=== Import Summary ===');
+    console.log(`Total rows: ${dataRowCount}`);
+    console.log(`Trades imported: ${trades.length}`);
+    console.log(`Rows skipped: ${dataRowCount - trades.length}`);
+    console.log(`Unique symbols: ${uniqueSymbols.join(', ')}`);
+    console.log(`Total invested: $${totalInvested.toFixed(2)}`);
+    console.log('Skip reasons:', skipReasons);
+    
+    // Log first few trades for verification
+    console.log('=== Sample Trades ===');
+    trades.slice(0, 5).forEach((t, i) => {
+      console.log(`  ${i + 1}. ${t.symbol} ${t.side.toUpperCase()} ${t.quantity.toFixed(10)} @ $${t.price.toFixed(4)} = $${(t.quantity * t.price).toFixed(2)}`);
     });
 
     return {
@@ -669,6 +718,8 @@ export function parseFlexibleCSV(
         rowsSkipped: dataRowCount - trades.length,
         skipReasons,
         warnings,
+        totalInvested,
+        uniqueSymbols,
       },
     };
   } catch (e) {
@@ -682,6 +733,8 @@ export function parseFlexibleCSV(
         rowsSkipped: 0,
         skipReasons,
         warnings,
+        totalInvested: 0,
+        uniqueSymbols: [],
       },
     };
   }

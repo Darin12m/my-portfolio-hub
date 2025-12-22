@@ -189,10 +189,15 @@ export function formatPercent(value: number): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-// Format quantity
+// Format quantity with appropriate precision
 export function formatQuantity(value: number): string {
   if (value === Math.floor(value)) {
     return value.toString();
   }
+  // For fractional shares, show up to 8 decimal places
+  if (value < 1) {
+    return value.toFixed(8).replace(/\.?0+$/, '');
+  }
+  // For larger quantities with fractions, show up to 6 decimal places
   return value.toFixed(6).replace(/\.?0+$/, '');
 }

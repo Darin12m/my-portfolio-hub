@@ -84,7 +84,7 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
       setParseResult({
         trades: [],
         errors: ['Failed to read file'],
-        diagnostics: { totalRows: 0, tradesImported: 0, rowsSkipped: 0, skipReasons: {}, warnings: [] },
+        diagnostics: { totalRows: 0, tradesImported: 0, rowsSkipped: 0, skipReasons: {}, warnings: [], totalInvested: 0, uniqueSymbols: [] },
       });
       setStep('preview');
     } finally {
@@ -185,6 +185,14 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                   <span className="text-muted-foreground">Trades found:</span>
                   <span className="font-semibold text-primary">{parseResult.diagnostics.tradesImported}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Unique symbols:</span>
+                  <span className="font-medium">{parseResult.diagnostics.uniqueSymbols.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total invested:</span>
+                  <span className="font-semibold text-primary">${parseResult.diagnostics.totalInvested.toFixed(2)}</span>
+                </div>
               </div>
 
               {parseResult.diagnostics.rowsSkipped > 0 && (
@@ -244,8 +252,8 @@ export function ImportModal({ source, existingTrades, onImport, fullWidth }: Imp
                         <td className={cn("px-2 py-1", trade.side === 'buy' ? 'text-profit' : 'text-loss')}>
                           {trade.side.toUpperCase()}
                         </td>
-                        <td className="px-2 py-1 text-right">{trade.quantity.toFixed(4)}</td>
-                        <td className="px-2 py-1 text-right">${trade.price.toFixed(2)}</td>
+                        <td className="px-2 py-1 text-right font-mono">{trade.quantity.toFixed(8)}</td>
+                        <td className="px-2 py-1 text-right">${trade.price.toFixed(4)}</td>
                       </tr>
                     ))}
                     {parseResult.trades.length > 5 && (
