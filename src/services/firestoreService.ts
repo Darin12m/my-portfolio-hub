@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ensureAuth } from '@/lib/auth';
+import { getCurrentUserId } from '@/lib/auth';
 import type { Trade, TradeSource } from '@/types/portfolio';
 
 const TRADES_COLLECTION = 'trades';
@@ -52,7 +52,7 @@ function firestoreToTrade(doc: FirestoreTradeDoc): Trade {
  * Get all trades for the current user
  */
 export async function getTrades(): Promise<Trade[]> {
-  const userId = await ensureAuth();
+  const userId = getCurrentUserId();
   
   const tradesRef = collection(db, TRADES_COLLECTION);
   const q = query(tradesRef, where('userId', '==', userId));
@@ -76,7 +76,7 @@ export async function getTrades(): Promise<Trade[]> {
 export async function addTrades(trades: Omit<Trade, 'id' | 'userId' | 'createdAt'>[]): Promise<void> {
   if (trades.length === 0) return;
   
-  const userId = await ensureAuth();
+  const userId = getCurrentUserId();
   const batch = writeBatch(db);
   
   for (const trade of trades) {
@@ -96,7 +96,7 @@ export async function addTrades(trades: Omit<Trade, 'id' | 'userId' | 'createdAt
  * Check if a trade with given brokerTransactionId already exists
  */
 export async function tradeExists(brokerTransactionId: string): Promise<boolean> {
-  const userId = await ensureAuth();
+  const userId = getCurrentUserId();
   
   const tradesRef = collection(db, TRADES_COLLECTION);
   const q = query(
@@ -121,7 +121,7 @@ export async function getExistingTransactionIds(): Promise<Set<string>> {
  * Delete a single trade by ID
  */
 export async function deleteTrade(tradeId: string): Promise<void> {
-  await ensureAuth();
+  getCurrentUserId(); // Verify user is authenticated
   const docRef = doc(db, TRADES_COLLECTION, tradeId);
   await deleteDoc(docRef);
 }
@@ -130,7 +130,7 @@ export async function deleteTrade(tradeId: string): Promise<void> {
  * Delete all trades for a given ticker
  */
 export async function deleteTradesByTicker(ticker: string): Promise<void> {
-  const userId = await ensureAuth();
+  const userId = getCurrentUserId();
   
   const tradesRef = collection(db, TRADES_COLLECTION);
   const q = query(
@@ -153,7 +153,7 @@ export async function deleteTradesByTicker(ticker: string): Promise<void> {
  * Delete all trades from a given source
  */
 export async function deleteTradesBySource(source: TradeSource): Promise<void> {
-  const userId = await ensureAuth();
+  const userId = getCurrentUserId();
   
   const tradesRef = collection(db, TRADES_COLLECTION);
   const q = query(
@@ -179,7 +179,7 @@ export async function updateTrade(
   tradeId: string, 
   updates: Partial<Omit<Trade, 'id' | 'userId' | 'createdAt'>>
 ): Promise<void> {
-  await ensureAuth();
+  getCurrentUserId(); // Verify user is authenticated
   const docRef = doc(db, TRADES_COLLECTION, tradeId);
   await updateDoc(docRef, updates);
 }
@@ -188,7 +188,7 @@ export async function updateTrade(
  * Clear all trades for current user
  */
 export async function clearAllTrades(): Promise<void> {
-  const userId = await ensureAuth();
+  const userId = getCurrentUserId();
   
   const tradesRef = collection(db, TRADES_COLLECTION);
   const q = query(tradesRef, where('userId', '==', userId));

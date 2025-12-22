@@ -12,7 +12,7 @@ import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculat
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
 import { getTrades, addTrades, deleteTradesByTicker, getExistingTransactionIds } from '@/services/firestoreService';
-import { ensureAuth } from '@/lib/auth';
+
 import { parseCSV, filterDuplicates } from '@/services/importService';
 
 const REFRESH_INTERVAL = 30000;
@@ -30,7 +30,6 @@ export default function Holdings() {
   useEffect(() => {
     const loadTrades = async () => {
       try {
-        await ensureAuth();
         const firestoreTrades = await getTrades();
         setTrades(firestoreTrades);
         console.log('Loaded trades from Firestore:', firestoreTrades.length);
