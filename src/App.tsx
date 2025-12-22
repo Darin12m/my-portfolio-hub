@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import Holdings from "./pages/Holdings";
 import Settings from "./pages/Settings";
 import AssetDetail from "./pages/AssetDetail";
+import CryptoAccounts from "./pages/CryptoAccounts";
+import CryptoPortfolio from "./pages/CryptoPortfolio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +23,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Holdings />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/crypto" element={<CryptoAccounts />} />
+            <Route path="/crypto" element={<CryptoPortfolio />} />
             <Route path="/asset/:symbol" element={<AssetDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

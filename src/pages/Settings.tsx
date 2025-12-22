@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Sun, Moon, Monitor, Trash2, Pencil, Check } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, Monitor, Trash2, Pencil, Check, Wallet, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTheme } from '@/hooks/use-theme';
@@ -96,6 +96,30 @@ export default function Settings() {
               );
             })}
           </div>
+        </section>
+
+        {/* Crypto Accounts Section */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Crypto Accounts
+          </h2>
+          
+          <Link to="/settings/crypto">
+            <div className="bg-card rounded-lg border border-border p-4 flex items-center justify-between hover:border-primary/50 transition-colors cursor-pointer touch-feedback">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Exchange Connections</p>
+                  <p className="text-sm text-muted-foreground">
+                    Connect Binance, Gate.io and more
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </Link>
         </section>
 
         {/* Portfolio Section */}
