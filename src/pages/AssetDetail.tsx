@@ -1,106 +1,36 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
-import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, formatCurrency, formatPercent, formatQuantity } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
 import type { LivePrice, Trade } from '@/types/portfolio';
 import { getTrades } from '@/services/firestoreService';
+import { 
+  fetchStockData, 
+  fetchStockNews, 
+  formatTimeAgo, 
+  getMarketStateLabel,
+  type StockData,
+  type YahooNews
+} from '@/services/yahooService';
 
+type TimeRange = '1D' | '5D' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | 'MAX';
 
-type TimeRange = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | 'All';
-
-const TIME_RANGES: TimeRange[] = ['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', 'All'];
-
-// Generate mock chart data for different time ranges
-function generateChartData(currentPrice: number, range: TimeRange) {
-  const data = [];
-  const now = Date.now();
-  
-  let points: number;
-  let interval: number;
-  let variation: number;
-  
-  switch (range) {
-    case '1D': points = 78; interval = 5 * 60 * 1000; variation = 0.02; break;
-    case '5D': points = 40; interval = 3 * 60 * 60 * 1000; variation = 0.04; break;
-    case '1M': points = 22; interval = 24 * 60 * 60 * 1000; variation = 0.08; break;
-    case '6M': points = 26; interval = 7 * 24 * 60 * 60 * 1000; variation = 0.15; break;
-    case 'YTD': points = 40; interval = 7 * 24 * 60 * 60 * 1000; variation = 0.18; break;
-    case '1Y': points = 52; interval = 7 * 24 * 60 * 60 * 1000; variation = 0.25; break;
-    case '5Y': points = 60; interval = 30 * 24 * 60 * 60 * 1000; variation = 0.5; break;
-    case 'All': points = 80; interval = 45 * 24 * 60 * 60 * 1000; variation = 0.6; break;
-  }
-
-  const startMultiplier = 1 - variation + Math.random() * variation;
-  let value = currentPrice * startMultiplier;
-  
-  for (let i = points; i >= 0; i--) {
-    const time = now - i * interval;
-    const change = (Math.random() - 0.48) * variation * 0.08 * currentPrice;
-    value = Math.max(value + change, currentPrice * 0.3);
-    
-    data.push({
-      time,
-      value,
-      label: formatTimeLabel(time, range),
-    });
-  }
-  
-  data[data.length - 1].value = currentPrice;
-  return data;
-}
-
-function formatTimeLabel(timestamp: number, range: TimeRange): string {
-  const date = new Date(timestamp);
-  
-  switch (range) {
-    case '1D':
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    case '5D':
-      return date.toLocaleDateString([], { weekday: 'short' });
-    case '1M':
-    case '6M':
-    case 'YTD':
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    case '1Y':
-    case '5Y':
-    case 'All':
-      return date.toLocaleDateString([], { month: 'short', year: '2-digit' });
-    default:
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-}
-
-// Mock news data
-const mockNews = [
-  {
-    id: 1,
-    headline: "Q4 earnings beat expectations with strong revenue growth",
-    source: "Reuters",
-    time: "2 hours ago"
-  },
-  {
-    id: 2,
-    headline: "Analyst upgrades rating to Buy with new price target",
-    source: "Bloomberg",
-    time: "5 hours ago"
-  },
-  {
-    id: 3,
-    headline: "Company announces strategic partnership in emerging markets",
-    source: "Financial Times",
-    time: "1 day ago"
-  },
-];
+const TIME_RANGES: TimeRange[] = ['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 
 export default function AssetDetail() {
   const { symbol } = useParams<{ symbol: string }>();
   const navigate = useNavigate();
-  const [timeRange, setTimeRange] = useState<TimeRange>('1D');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [stockData, setStockData] = useState<StockData | null>(null);
+  const [news, setNews] = useState<YahooNews[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNewsLoading, setIsNewsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load trades from Firestore
   useEffect(() => {
@@ -115,20 +45,75 @@ export default function AssetDetail() {
     loadTrades();
   }, []);
 
-  const currentPrice = symbol ? mockPrices[symbol] || 0 : 0;
-  
+  // Load stock data from Yahoo
+  useEffect(() => {
+    if (!symbol) return;
+    
+    const loadStockData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      const data = await fetchStockData(symbol, timeRange);
+      if (data) {
+        setStockData(data);
+      } else {
+        setError('Failed to load stock data');
+      }
+      setIsLoading(false);
+    };
+    
+    loadStockData();
+  }, [symbol, timeRange]);
+
+  // Load news separately
+  useEffect(() => {
+    if (!symbol) return;
+    
+    const loadNews = async () => {
+      setIsNewsLoading(true);
+      const newsData = await fetchStockNews(symbol);
+      setNews(newsData);
+      setIsNewsLoading(false);
+    };
+    
+    loadNews();
+  }, [symbol]);
+
+  const handleRefresh = async () => {
+    if (!symbol) return;
+    setIsLoading(true);
+    const data = await fetchStockData(symbol, timeRange);
+    if (data) setStockData(data);
+    setIsLoading(false);
+  };
+
+  // Calculate prices map for holdings calculation
   const prices = useMemo(() => {
     const priceMap = new Map<string, LivePrice>();
-    Object.entries(mockPrices).forEach(([ticker, price]) => {
-      priceMap.set(ticker, {
-        ticker,
-        price,
+    if (stockData && symbol) {
+      priceMap.set(symbol, {
+        ticker: symbol,
+        price: stockData.quote.regularMarketPrice,
+        previousClose: stockData.quote.regularMarketPreviousClose,
+        change: stockData.quote.regularMarketChange,
+        changePercent: stockData.quote.regularMarketChangePercent,
         timestamp: Date.now(),
-        source: 'mock',
+        source: 'yahoo',
       });
+    }
+    // Add prices for other holdings from trades
+    trades.forEach(trade => {
+      if (!priceMap.has(trade.ticker)) {
+        priceMap.set(trade.ticker, {
+          ticker: trade.ticker,
+          price: trade.pricePerShare,
+          timestamp: Date.now(),
+          source: 'trade',
+        });
+      }
     });
     return priceMap;
-  }, []);
+  }, [stockData, symbol, trades]);
 
   const holding = useMemo(() => {
     if (!symbol || trades.length === 0) return null;
@@ -136,36 +121,32 @@ export default function AssetDetail() {
     return holdings.find(h => h.ticker === symbol) || null;
   }, [symbol, prices, trades]);
 
-  const chartData = useMemo(() => {
-    return generateChartData(currentPrice, timeRange);
-  }, [currentPrice, timeRange]);
+  const chartData = stockData?.chartData || [];
+  const quote = stockData?.quote;
+  const stats = stockData?.stats;
 
-  const baseline = chartData[0]?.value || currentPrice;
-  const priceChange = currentPrice - baseline;
-  const priceChangePercent = baseline > 0 ? (priceChange / baseline) * 100 : 0;
+  const baseline = chartData[0]?.value || quote?.regularMarketPreviousClose || 0;
+  const currentPrice = quote?.regularMarketPrice || 0;
+  const priceChange = quote?.regularMarketChange || 0;
+  const priceChangePercent = quote?.regularMarketChangePercent || 0;
   const isPositive = priceChange >= 0;
 
-  const minValue = Math.min(...chartData.map(d => d.value), baseline);
-  const maxValue = Math.max(...chartData.map(d => d.value), baseline);
-  const padding = (maxValue - minValue) * 0.12;
+  const minValue = chartData.length > 0 ? Math.min(...chartData.map(d => d.value)) : 0;
+  const maxValue = chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) : 0;
+  const padding = (maxValue - minValue) * 0.12 || 10;
 
-  // Stock stats
-  const stats = {
-    prevClose: formatCurrency(currentPrice * 0.995),
-    dayRange: `${formatCurrency(currentPrice * 0.98)} - ${formatCurrency(currentPrice * 1.02)}`,
-    yearRange: `${formatCurrency(currentPrice * 0.65)} - ${formatCurrency(currentPrice * 1.2)}`,
-    marketCap: '$3.0T',
-    volume: '52.3M',
-    avgVolume: '48.2M',
-    peRatio: '28.5',
-    eps: formatCurrency(currentPrice / 28.5),
-    earningsDate: 'Jan 25, 2025',
-  };
+  const marketState = quote ? getMarketStateLabel(quote.marketState) : null;
 
-  if (!holding) {
+  // Get company name from holding or stock data
+  const companyName = holding?.name || quote?.longName || quote?.shortName || symbol;
+
+  if (error && !stockData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Asset not found</p>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">{error}</p>
+        <Button onClick={() => navigate(-1)} variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
+        </Button>
       </div>
     );
   }
@@ -184,22 +165,27 @@ export default function AssetDetail() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2.5 flex-1">
-              <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden">
-                <img
-                  src={holding.logoUrl}
-                  alt={symbol}
-                  className="w-5 h-5 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-semibold leading-tight truncate max-w-[200px]">
+                  {isLoading ? <Skeleton className="h-5 w-32" /> : companyName}
+                </h1>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs font-medium text-muted-foreground">{symbol}</span>
               </div>
-              <div>
-                <h1 className="text-base font-semibold leading-tight">{holding.name}</h1>
-                <p className="text-xs text-muted-foreground">{symbol} • STOCK</p>
-              </div>
+              {marketState && !isLoading && (
+                <p className={cn("text-xs", marketState.color)}>{marketState.label}</p>
+              )}
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="h-9 w-9"
+            >
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            </Button>
           </div>
         </div>
       </header>
@@ -207,21 +193,30 @@ export default function AssetDetail() {
       <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom">
         {/* Price Header */}
         <div className="space-y-1">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-bold">{formatCurrency(currentPrice)}</h2>
-            <span className="text-xs text-muted-foreground">USD</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {isPositive ? (
-              <TrendingUp className="h-4 w-4 text-success" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-destructive" />
-            )}
-            <span className={cn("text-sm font-semibold", isPositive ? "text-success" : "text-destructive")}>
-              {isPositive ? '+' : ''}{formatCurrency(Math.abs(priceChange))} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
-            </span>
-            <span className="text-xs text-muted-foreground">Today</span>
-          </div>
+          {isLoading ? (
+            <>
+              <Skeleton className="h-9 w-40" />
+              <Skeleton className="h-5 w-32" />
+            </>
+          ) : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <h2 className="text-3xl font-bold">{formatCurrency(currentPrice)}</h2>
+                <span className="text-xs text-muted-foreground">USD</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {isPositive ? (
+                  <TrendingUp className="h-4 w-4 text-success" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-destructive" />
+                )}
+                <span className={cn("text-sm font-semibold", isPositive ? "text-success" : "text-destructive")}>
+                  {isPositive ? '+' : ''}{formatCurrency(Math.abs(priceChange))} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
+                </span>
+                <span className="text-xs text-muted-foreground">Today</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Trading Chart */}
@@ -246,189 +241,228 @@ export default function AssetDetail() {
 
           {/* Chart */}
           <div className="h-56 w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart 
-                data={chartData}
-                margin={{ top: 8, right: 50, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="assetProfitGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="assetLossGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
-                    <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.2} />
-                  </linearGradient>
-                </defs>
+            {isLoading ? (
+              <div className="h-full w-full flex items-center justify-center">
+                <Skeleton className="h-full w-full rounded-lg" />
+              </div>
+            ) : chartData.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart 
+                    data={chartData}
+                    margin={{ top: 8, right: 50, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="assetProfitGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="assetLossGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
+                        <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    
+                    <XAxis 
+                      dataKey="label" 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis 
+                      domain={[minValue - padding, maxValue + padding]}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
+                      tickFormatter={(val) => `$${val.toFixed(0)}`}
+                      orientation="right"
+                      width={45}
+                    />
+                    
+                    <ReferenceLine 
+                      y={baseline} 
+                      stroke="hsl(var(--chart-baseline))"
+                      strokeDasharray="4 4"
+                      strokeWidth={1}
+                    />
+                    
+                    <ReferenceLine 
+                      y={currentPrice} 
+                      stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+                      strokeDasharray="2 2"
+                      strokeWidth={1.5}
+                    />
+                    
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-chart-popover border border-chart-border rounded-lg px-3 py-2 shadow-xl">
+                              <p className="text-sm font-semibold text-chart-foreground">
+                                {formatCurrency(data.value)}
+                              </p>
+                              <p className="text-xs text-chart-muted">{data.label}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                      cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    />
+                    
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+                      strokeWidth={2}
+                      fill={isPositive ? 'url(#assetProfitGradient)' : 'url(#assetLossGradient)'}
+                      animationDuration={400}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
                 
-                <XAxis 
-                  dataKey="label" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
-                  interval="preserveStartEnd"
-                />
-                <YAxis 
-                  domain={[minValue - padding, maxValue + padding]}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
-                  tickFormatter={(val) => formatCurrency(val).replace('$', '')}
-                  orientation="right"
-                  width={45}
-                />
-                
-                <ReferenceLine 
-                  y={baseline} 
-                  stroke="hsl(var(--chart-baseline))"
-                  strokeDasharray="4 4"
-                  strokeWidth={1}
-                />
-                
-                <ReferenceLine 
-                  y={currentPrice} 
-                  stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
-                  strokeDasharray="2 2"
-                  strokeWidth={1.5}
-                />
-                
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-chart-popover border border-chart-border rounded-lg px-3 py-2 shadow-xl">
-                          <p className="text-sm font-semibold text-chart-foreground">
-                            {formatCurrency(data.value)}
-                          </p>
-                          <p className="text-xs text-chart-muted">{data.label}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                  cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
-                />
-                
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
-                  strokeWidth={2}
-                  fill={isPositive ? 'url(#assetProfitGradient)' : 'url(#assetLossGradient)'}
-                  animationDuration={400}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-            
-            {/* Current Price Badge */}
-            <div 
-              className={cn(
-                "absolute right-0 px-2 py-0.5 rounded text-[10px] font-semibold",
-                isPositive ? "bg-chart-profit text-white" : "bg-chart-loss text-white"
-              )}
-              style={{ top: '50%', transform: 'translateY(-50%)' }}
-            >
-              {formatCurrency(currentPrice)}
-            </div>
+                {/* Current Price Badge */}
+                <div 
+                  className={cn(
+                    "absolute right-0 px-2 py-0.5 rounded text-[10px] font-semibold",
+                    isPositive ? "bg-chart-profit text-white" : "bg-chart-loss text-white"
+                  )}
+                  style={{ top: '50%', transform: 'translateY(-50%)' }}
+                >
+                  {formatCurrency(currentPrice)}
+                </div>
+              </>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
+                No chart data available
+              </div>
+            )}
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Previous Close</span>
-              <span className="font-medium">{stats.prevClose}</span>
+          {isLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(8)].map((_, i) => (
+                <Skeleton key={i} className="h-5" />
+              ))}
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Day's Range</span>
-              <span className="font-medium text-xs">{stats.dayRange}</span>
+          ) : stats ? (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Previous Close</span>
+                <span className="font-medium">{stats.prevClose}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Open</span>
+                <span className="font-medium">{stats.open}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Day's Range</span>
+                <span className="font-medium text-xs">{stats.dayRange}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">52-Week Range</span>
+                <span className="font-medium text-xs">{stats.yearRange}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Market Cap</span>
+                <span className="font-medium">{stats.marketCap}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">P/E Ratio</span>
+                <span className="font-medium">{stats.peRatio}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">EPS</span>
+                <span className="font-medium">{stats.eps}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Volume</span>
+                <span className="font-medium">{stats.volume}</span>
+              </div>
+              <div className="flex justify-between col-span-2">
+                <span className="text-muted-foreground">Avg. Volume</span>
+                <span className="font-medium">{stats.avgVolume}</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">52-Week Range</span>
-              <span className="font-medium text-xs">{stats.yearRange}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Market Cap</span>
-              <span className="font-medium">{stats.marketCap}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Volume</span>
-              <span className="font-medium">{stats.volume}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Avg. Volume</span>
-              <span className="font-medium">{stats.avgVolume}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">P/E Ratio</span>
-              <span className="font-medium">{stats.peRatio}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">EPS</span>
-              <span className="font-medium">{stats.eps}</span>
-            </div>
-            <div className="flex justify-between col-span-2">
-              <span className="text-muted-foreground">Earnings Date</span>
-              <span className="font-medium">{stats.earningsDate}</span>
-            </div>
-          </div>
+          ) : null}
         </div>
 
-        {/* Your Position */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Position</h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Shares</span>
-              <span className="font-medium">{formatQuantity(holding.shares)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Avg Cost</span>
-              <span className="font-medium">{formatCurrency(holding.averageBuyPrice)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Market Value</span>
-              <span className="font-medium">{formatCurrency(holding.currentValue)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Return</span>
-              <span className={cn("font-medium", holding.unrealizedPL >= 0 ? "text-success" : "text-destructive")}>
-                {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)} ({formatPercent(holding.unrealizedPLPercent)})
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Allocation</span>
-              <span className="font-medium">{holding.allocationPercent.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Holding Period</span>
-              <span className="font-medium">{holding.holdingPeriodDays} days</span>
+        {/* Your Position - Only show if user owns this stock */}
+        {holding && (
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 rounded-xl p-4 space-y-3">
+            <h3 className="text-xs font-semibold text-primary uppercase tracking-wider">Your Position</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shares</span>
+                <span className="font-semibold">{formatQuantity(holding.shares)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Avg Cost</span>
+                <span className="font-semibold">{formatCurrency(holding.averageBuyPrice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Market Value</span>
+                <span className="font-semibold">{formatCurrency(holding.currentValue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Unrealized P/L</span>
+                <span className={cn("font-semibold", holding.unrealizedPL >= 0 ? "text-success" : "text-destructive")}>
+                  {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)} ({formatPercent(holding.unrealizedPLPercent)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Allocation</span>
+                <span className="font-semibold">{holding.allocationPercent.toFixed(1)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Holding Period</span>
+                <span className="font-semibold">{holding.holdingPeriodDays} days</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* News Section */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
-            <Button variant="ghost" size="sm" className="text-xs h-7">
-              View All <ExternalLink className="h-3 w-3 ml-1" />
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {mockNews.map((news) => (
-              <div key={news.id} className="border-b border-border/50 pb-3 last:border-0 last:pb-0">
-                <p className="text-sm font-medium leading-tight">{news.headline}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {news.source} • {news.time}
-                </p>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
+          {isNewsLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              ))}
+            </div>
+          ) : news.length > 0 ? (
+            <div className="space-y-3">
+              {news.map((item, index) => (
+                <a
+                  key={index}
+                  href={item.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block border-b border-border/50 pb-3 last:border-0 last:pb-0 hover:bg-muted/30 -mx-2 px-2 py-1 rounded transition-colors"
+                >
+                  <p className="text-sm font-medium leading-tight line-clamp-2">{item.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">{item.publisher}</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground">{formatTimeAgo(item.providerPublishTime)}</span>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No recent news</p>
+          )}
         </div>
       </main>
     </div>
