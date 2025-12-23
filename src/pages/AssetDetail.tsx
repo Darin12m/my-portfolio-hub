@@ -74,7 +74,7 @@ export default function AssetDetail() {
     loadStockData();
   }, [symbol, timeRange]);
 
-  // Load news separately
+  // Load news separately - depends on stockData for company name
   useEffect(() => {
     if (!symbol) {
       setIsNewsLoading(false);
@@ -83,13 +83,15 @@ export default function AssetDetail() {
     
     const loadNews = async () => {
       setIsNewsLoading(true);
-      const newsData = await fetchStockNews(symbol);
+      // Pass company name for better filtering
+      const companyName = stockData?.quote?.longName || stockData?.quote?.shortName;
+      const newsData = await fetchStockNews(symbol, companyName);
       setNews(newsData);
       setIsNewsLoading(false);
     };
     
     loadNews();
-  }, [symbol]);
+  }, [symbol, stockData?.quote?.longName, stockData?.quote?.shortName]);
 
   const handleRefresh = async () => {
     if (!symbol) return;
@@ -516,7 +518,7 @@ export default function AssetDetail() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No recent news</p>
+            <p className="text-sm text-muted-foreground">No recent news for {symbol}</p>
           )}
         </div>
       </main>
