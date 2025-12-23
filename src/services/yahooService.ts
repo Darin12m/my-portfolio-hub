@@ -5,6 +5,7 @@ const VERCEL_API_BASE = 'https://portfolio-hub-tau.vercel.app/api';
 const CORS_PROXY = 'https://corsproxy.io/?';
 const YAHOO_CHART_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
 const YAHOO_SEARCH_URL = 'https://query1.finance.yahoo.com/v1/finance/search';
+const YAHOO_QUOTE_SUMMARY_URL = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary';
 
 export interface YahooQuote {
   symbol: string;
@@ -156,6 +157,43 @@ export interface StockData {
   };
 }
 
+/**
+ * Fetch additional fundamentals from quoteSummary endpoint
+ */
+async function fetchQuoteSummary(symbol: string): Promise<{
+  marketCap?: number;
+  trailingPE?: number;
+  epsTrailingTwelveMonths?: number;
+  averageVolume?: number;
+} | null> {
+  try {
+    const modules = 'price,summaryDetail,defaultKeyStatistics';
+    const yahooUrl = `${YAHOO_QUOTE_SUMMARY_URL}/${encodeURIComponent(symbol)}?modules=${modules}`;
+    const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
+    
+    const response = await fetch(corsUrl, { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    const result = data?.quoteSummary?.result?.[0];
+    if (!result) return null;
+    
+    const price = result.price || {};
+    const summaryDetail = result.summaryDetail || {};
+    const keyStats = result.defaultKeyStatistics || {};
+    
+    return {
+      marketCap: price.marketCap?.raw || summaryDetail.marketCap?.raw,
+      trailingPE: summaryDetail.trailingPE?.raw || keyStats.trailingPE?.raw,
+      epsTrailingTwelveMonths: keyStats.trailingEps?.raw || summaryDetail.trailingEps?.raw,
+      averageVolume: summaryDetail.averageVolume?.raw || price.averageDailyVolume10Day?.raw,
+    };
+  } catch (error) {
+    console.warn('quoteSummary fetch failed, using chart data only:', error);
+    return null;
+  }
+}
+
 export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '1Y'): Promise<StockData | null> {
   // Sanitize the symbol first
   const symbol = sanitizeSymbol(rawSymbol);
@@ -167,32 +205,48 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
   try {
     const { range, interval } = RANGE_CONFIG[timeRange];
     
-    // Try Vercel API first, fallback to CORS proxy
-    let data: any = null;
+    // Fetch chart data and quoteSummary in parallel
+    let chartData: any = null;
+    let summaryData: Awaited<ReturnType<typeof fetchQuoteSummary>> = null;
     
-    try {
-      const vercelUrl = `${VERCEL_API_BASE}/yahoo-price?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`;
-      const response = await fetch(vercelUrl, { signal: AbortSignal.timeout(5000) });
-      if (response.ok) {
-        data = await response.json();
-      }
-    } catch {
-      // Vercel API failed, try CORS proxy
+    const [chartResult, summaryResult] = await Promise.allSettled([
+      (async () => {
+        // Try Vercel API first, fallback to CORS proxy
+        try {
+          const vercelUrl = `${VERCEL_API_BASE}/yahoo-price?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`;
+          const response = await fetch(vercelUrl, { signal: AbortSignal.timeout(5000) });
+          if (response.ok) {
+            return await response.json();
+          }
+        } catch {
+          // Vercel API failed
+        }
+        
+        const yahooUrl = `${YAHOO_CHART_URL}/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
+        const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
+        const response = await fetch(corsUrl);
+        if (!response.ok) {
+          throw new Error(`Yahoo price API error: ${response.status}`);
+        }
+        return await response.json();
+      })(),
+      fetchQuoteSummary(symbol)
+    ]);
+    
+    if (chartResult.status === 'fulfilled') {
+      chartData = chartResult.value;
+    }
+    if (summaryResult.status === 'fulfilled') {
+      summaryData = summaryResult.value;
     }
     
-    if (!data) {
-      const yahooUrl = `${YAHOO_CHART_URL}/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
-      const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
-      const response = await fetch(corsUrl);
-      if (!response.ok) {
-        console.error('Yahoo price API error:', response.status);
-        return null;
-      }
-      data = await response.json();
+    if (!chartData) {
+      console.error('Failed to fetch chart data');
+      return null;
     }
     
     // Handle API response structure - be lenient with partial data
-    const result = data?.chart?.result?.[0];
+    const result = chartData?.chart?.result?.[0];
     if (!result?.meta) {
       console.error('Invalid Yahoo response structure');
       return null;
@@ -211,6 +265,12 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
     
     const previousClose = meta.chartPreviousClose ?? meta.previousClose ?? regularMarketPrice;
     
+    // Merge fundamentals: prefer quoteSummary, fallback to chart meta
+    const marketCap = summaryData?.marketCap || meta.marketCap || 0;
+    const trailingPE = summaryData?.trailingPE || meta.trailingPE;
+    const epsTrailingTwelveMonths = summaryData?.epsTrailingTwelveMonths || meta.epsTrailingTwelveMonths;
+    const averageVolume = summaryData?.averageVolume || meta.averageDailyVolume10Day || 0;
+    
     // Build quote data with safe fallbacks
     const quote: YahooQuote = {
       symbol: meta.symbol || symbol,
@@ -227,16 +287,16 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
       regularMarketDayHigh: meta.regularMarketDayHigh ?? (closes.length > 0 ? Math.max(...closes.filter(Boolean)) : regularMarketPrice),
       fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? 0,
       fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? 0,
-      marketCap: meta.marketCap ?? 0,
+      marketCap,
       regularMarketVolume: meta.regularMarketVolume ?? 0,
-      averageDailyVolume10Day: meta.averageDailyVolume10Day ?? 0,
-      trailingPE: meta.trailingPE,
-      epsTrailingTwelveMonths: meta.epsTrailingTwelveMonths,
+      averageDailyVolume10Day: averageVolume,
+      trailingPE,
+      epsTrailingTwelveMonths,
       marketState: getMarketState(),
     };
     
     // Build chart data - filter out invalid points
-    const chartData: ChartDataPoint[] = timestamps
+    const chartPoints: ChartDataPoint[] = timestamps
       .map((time: number, i: number) => {
         const value = closes[i];
         if (value == null || isNaN(value) || value <= 0) return null;
@@ -267,14 +327,14 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
       eps: quote.epsTrailingTwelveMonths ? `$${quote.epsTrailingTwelveMonths.toFixed(2)}` : 'N/A',
     };
     
-    return { quote, chartData, stats };
+    return { quote, chartData: chartPoints, stats };
   } catch (error) {
     console.error('Error fetching stock data:', error);
     return null;
   }
 }
 
-export async function fetchStockNews(rawSymbol: string): Promise<YahooNews[]> {
+export async function fetchStockNews(rawSymbol: string, companyName?: string): Promise<YahooNews[]> {
   // Sanitize the symbol first
   const symbol = sanitizeSymbol(rawSymbol);
   if (!symbol) {
@@ -282,43 +342,74 @@ export async function fetchStockNews(rawSymbol: string): Promise<YahooNews[]> {
   }
   
   try {
-    let data: any = null;
+    let rawNews: any[] = [];
     
     // Try Vercel API first, fallback to CORS proxy
     try {
       const vercelUrl = `${VERCEL_API_BASE}/yahoo-news?symbol=${encodeURIComponent(symbol)}`;
       const response = await fetch(vercelUrl, { signal: AbortSignal.timeout(5000) });
       if (response.ok) {
-        data = await response.json();
+        const data = await response.json();
+        rawNews = Array.isArray(data) ? data : [];
       }
     } catch {
       // Vercel API failed, try CORS proxy
     }
     
-    if (!data) {
-      const yahooUrl = `${YAHOO_SEARCH_URL}?q=${encodeURIComponent(symbol)}&newsCount=5`;
+    if (rawNews.length === 0) {
+      const yahooUrl = `${YAHOO_SEARCH_URL}?q=${encodeURIComponent(symbol)}&newsCount=10`;
       const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
       const response = await fetch(corsUrl);
       if (!response.ok) {
         console.error('Yahoo news API error:', response.status);
         return [];
       }
-      data = await response.json();
-      // Extract news from search response
-      data = data?.news || [];
+      const data = await response.json();
+      rawNews = data?.news || [];
     }
     
-    // Handle array response
-    if (!Array.isArray(data)) {
+    if (!Array.isArray(rawNews)) {
       return [];
     }
     
-    return data.slice(0, 5).map((item: any) => ({
-      title: item.title || '',
-      link: item.link || '',
-      publisher: item.publisher || 'Unknown',
-      providerPublishTime: item.providerPublishTime || 0,
-    })).filter((item: YahooNews) => item.title && item.link);
+    // Filter for stock-specific news
+    const symbolUpper = symbol.toUpperCase();
+    const companyNameLower = companyName?.toLowerCase() || '';
+    
+    // Parse and filter news
+    const filteredNews = rawNews
+      .map((item: any) => ({
+        title: item.title || '',
+        link: item.link || '',
+        publisher: item.publisher || 'Unknown',
+        providerPublishTime: item.providerPublishTime || 0,
+        relatedTickers: item.relatedTickers || [],
+      }))
+      .filter((item) => {
+        if (!item.title || !item.link) return false;
+        
+        // Priority 1: Check if relatedTickers includes our symbol
+        if (Array.isArray(item.relatedTickers)) {
+          const hasSymbol = item.relatedTickers.some(
+            (t: string) => t?.toUpperCase() === symbolUpper
+          );
+          if (hasSymbol) return true;
+        }
+        
+        // Priority 2: Check if title contains ticker or company name
+        const titleLower = item.title.toLowerCase();
+        const titleUpper = item.title.toUpperCase();
+        
+        if (titleUpper.includes(symbolUpper)) return true;
+        if (companyNameLower && titleLower.includes(companyNameLower)) return true;
+        
+        // Exclude generic market news if no match
+        return false;
+      })
+      .slice(0, 5)
+      .map(({ relatedTickers, ...rest }) => rest as YahooNews);
+    
+    return filteredNews;
   } catch (error) {
     console.error('Error fetching stock news:', error);
     return [];
