@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, RefreshCw } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
@@ -13,6 +13,7 @@ import {
   fetchStockNews, 
   formatTimeAgo, 
   getMarketStateLabel,
+  sanitizeSymbol,
   type StockData,
   type YahooNews
 } from '@/services/yahooService';
@@ -22,7 +23,7 @@ type TimeRange = '1D' | '5D' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | 'MAX';
 const TIME_RANGES: TimeRange[] = ['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 
 export default function AssetDetail() {
-  const { symbol } = useParams<{ symbol: string }>();
+  const { symbol: rawSymbol } = useParams<{ symbol: string }>();
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -31,6 +32,9 @@ export default function AssetDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNewsLoading, setIsNewsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sanitize the symbol from URL
+  const symbol = useMemo(() => sanitizeSymbol(rawSymbol), [rawSymbol]);
 
   // Load trades from Firestore
   useEffect(() => {
@@ -47,7 +51,11 @@ export default function AssetDetail() {
 
   // Load stock data from Yahoo
   useEffect(() => {
-    if (!symbol) return;
+    if (!symbol) {
+      setError('Invalid stock symbol');
+      setIsLoading(false);
+      return;
+    }
     
     const loadStockData = async () => {
       setIsLoading(true);
@@ -56,8 +64,9 @@ export default function AssetDetail() {
       const data = await fetchStockData(symbol, timeRange);
       if (data) {
         setStockData(data);
+        setError(null);
       } else {
-        setError('Failed to load stock data');
+        setError('Unable to load stock data');
       }
       setIsLoading(false);
     };
@@ -67,7 +76,10 @@ export default function AssetDetail() {
 
   // Load news separately
   useEffect(() => {
-    if (!symbol) return;
+    if (!symbol) {
+      setIsNewsLoading(false);
+      return;
+    }
     
     const loadNews = async () => {
       setIsNewsLoading(true);
@@ -82,8 +94,14 @@ export default function AssetDetail() {
   const handleRefresh = async () => {
     if (!symbol) return;
     setIsLoading(true);
+    setError(null);
     const data = await fetchStockData(symbol, timeRange);
-    if (data) setStockData(data);
+    if (data) {
+      setStockData(data);
+      setError(null);
+    } else {
+      setError('Unable to load stock data');
+    }
     setIsLoading(false);
   };
 
@@ -138,12 +156,19 @@ export default function AssetDetail() {
   const marketState = quote ? getMarketStateLabel(quote.marketState) : null;
 
   // Get company name from holding or stock data
-  const companyName = holding?.name || quote?.longName || quote?.shortName || symbol;
+  const companyName = holding?.name || quote?.longName || quote?.shortName || symbol || rawSymbol;
 
-  if (error && !stockData) {
+  // Invalid symbol error
+  if (!symbol) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <p className="text-muted-foreground">{error}</p>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+        <div className="text-center space-y-2">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+          <h2 className="text-lg font-semibold">Invalid Stock Symbol</h2>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            "{rawSymbol}" is not a valid stock symbol. Please check and try again.
+          </p>
+        </div>
         <Button onClick={() => navigate(-1)} variant="outline">
           <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
         </Button>
@@ -191,6 +216,22 @@ export default function AssetDetail() {
       </header>
 
       <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom">
+        {/* Error State with Retry */}
+        {error && !stockData && !isLoading && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center space-y-3">
+            <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
+            <div>
+              <h3 className="font-semibold text-destructive">{error}</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                We couldn't fetch data for {symbol}. Please try again.
+              </p>
+            </div>
+            <Button onClick={handleRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" /> Retry
+            </Button>
+          </div>
+        )}
+
         {/* Price Header */}
         <div className="space-y-1">
           {isLoading ? (
@@ -198,7 +239,7 @@ export default function AssetDetail() {
               <Skeleton className="h-9 w-40" />
               <Skeleton className="h-5 w-32" />
             </>
-          ) : (
+          ) : stockData ? (
             <>
               <div className="flex items-baseline gap-2">
                 <h2 className="text-3xl font-bold">{formatCurrency(currentPrice)}</h2>
@@ -216,182 +257,190 @@ export default function AssetDetail() {
                 <span className="text-xs text-muted-foreground">Today</span>
               </div>
             </>
-          )}
-        </div>
-
-        {/* Trading Chart */}
-        <div className="trading-chart-container">
-          {/* Time Range Tabs */}
-          <div className="flex items-center gap-1 mb-4 overflow-x-auto scroll-smooth-x pb-1">
-            {TIME_RANGES.map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all touch-target min-w-[40px]",
-                  timeRange === range
-                    ? "bg-chart-active text-chart-active-foreground"
-                    : "text-chart-muted hover:text-chart-foreground"
-                )}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-
-          {/* Chart */}
-          <div className="h-56 w-full relative">
-            {isLoading ? (
-              <div className="h-full w-full flex items-center justify-center">
-                <Skeleton className="h-full w-full rounded-lg" />
-              </div>
-            ) : chartData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart 
-                    data={chartData}
-                    margin={{ top: 8, right: 50, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="assetProfitGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="assetLossGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
-                        <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.2} />
-                      </linearGradient>
-                    </defs>
-                    
-                    <XAxis 
-                      dataKey="label" 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis 
-                      domain={[minValue - padding, maxValue + padding]}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
-                      tickFormatter={(val) => `$${val.toFixed(0)}`}
-                      orientation="right"
-                      width={45}
-                    />
-                    
-                    <ReferenceLine 
-                      y={baseline} 
-                      stroke="hsl(var(--chart-baseline))"
-                      strokeDasharray="4 4"
-                      strokeWidth={1}
-                    />
-                    
-                    <ReferenceLine 
-                      y={currentPrice} 
-                      stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
-                      strokeDasharray="2 2"
-                      strokeWidth={1.5}
-                    />
-                    
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="bg-chart-popover border border-chart-border rounded-lg px-3 py-2 shadow-xl">
-                              <p className="text-sm font-semibold text-chart-foreground">
-                                {formatCurrency(data.value)}
-                              </p>
-                              <p className="text-xs text-chart-muted">{data.label}</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                      cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
-                    />
-                    
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
-                      strokeWidth={2}
-                      fill={isPositive ? 'url(#assetProfitGradient)' : 'url(#assetLossGradient)'}
-                      animationDuration={400}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-                
-                {/* Current Price Badge */}
-                <div 
-                  className={cn(
-                    "absolute right-0 px-2 py-0.5 rounded text-[10px] font-semibold",
-                    isPositive ? "bg-chart-profit text-white" : "bg-chart-loss text-white"
-                  )}
-                  style={{ top: '50%', transform: 'translateY(-50%)' }}
-                >
-                  {formatCurrency(currentPrice)}
-                </div>
-              </>
-            ) : (
-              <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
-                No chart data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
-          {isLoading ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[...Array(8)].map((_, i) => (
-                <Skeleton key={i} className="h-5" />
-              ))}
-            </div>
-          ) : stats ? (
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Previous Close</span>
-                <span className="font-medium">{stats.prevClose}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Open</span>
-                <span className="font-medium">{stats.open}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Day's Range</span>
-                <span className="font-medium text-xs">{stats.dayRange}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">52-Week Range</span>
-                <span className="font-medium text-xs">{stats.yearRange}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Market Cap</span>
-                <span className="font-medium">{stats.marketCap}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">P/E Ratio</span>
-                <span className="font-medium">{stats.peRatio}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">EPS</span>
-                <span className="font-medium">{stats.eps}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Volume</span>
-                <span className="font-medium">{stats.volume}</span>
-              </div>
-              <div className="flex justify-between col-span-2">
-                <span className="text-muted-foreground">Avg. Volume</span>
-                <span className="font-medium">{stats.avgVolume}</span>
-              </div>
-            </div>
           ) : null}
         </div>
+
+        {/* Trading Chart - Only show if loading or has data */}
+        {(isLoading || stockData) && (
+          <div className="trading-chart-container">
+            {/* Time Range Tabs */}
+            <div className="flex items-center gap-1 mb-4 overflow-x-auto scroll-smooth-x pb-1">
+              {TIME_RANGES.map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  disabled={isLoading}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-all touch-target min-w-[40px]",
+                    timeRange === range
+                      ? "bg-chart-active text-chart-active-foreground"
+                      : "text-chart-muted hover:text-chart-foreground",
+                    isLoading && "opacity-50"
+                  )}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+
+            {/* Chart */}
+            <div className="h-56 w-full relative">
+              {isLoading ? (
+                <div className="h-full w-full flex items-center justify-center">
+                  <Skeleton className="h-full w-full rounded-lg" />
+                </div>
+              ) : chartData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart 
+                      data={chartData}
+                      margin={{ top: 8, right: 50, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="assetProfitGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="assetLossGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
+                          <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.2} />
+                        </linearGradient>
+                      </defs>
+                      
+                      <XAxis 
+                        dataKey="label" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis 
+                        domain={[minValue - padding, maxValue + padding]}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
+                        tickFormatter={(val) => `$${val.toFixed(0)}`}
+                        orientation="right"
+                        width={45}
+                      />
+                      
+                      <ReferenceLine 
+                        y={baseline} 
+                        stroke="hsl(var(--chart-baseline))"
+                        strokeDasharray="4 4"
+                        strokeWidth={1}
+                      />
+                      
+                      <ReferenceLine 
+                        y={currentPrice} 
+                        stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+                        strokeDasharray="2 2"
+                        strokeWidth={1.5}
+                      />
+                      
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-chart-popover border border-chart-border rounded-lg px-3 py-2 shadow-xl">
+                                <p className="text-sm font-semibold text-chart-foreground">
+                                  {formatCurrency(data.value)}
+                                </p>
+                                <p className="text-xs text-chart-muted">{data.label}</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                        cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      />
+                      
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+                        strokeWidth={2}
+                        fill={isPositive ? 'url(#assetProfitGradient)' : 'url(#assetLossGradient)'}
+                        animationDuration={400}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  
+                  {/* Current Price Badge */}
+                  <div 
+                    className={cn(
+                      "absolute right-0 px-2 py-0.5 rounded text-[10px] font-semibold",
+                      isPositive ? "bg-chart-profit text-white" : "bg-chart-loss text-white"
+                    )}
+                    style={{ top: '50%', transform: 'translateY(-50%)' }}
+                  >
+                    {formatCurrency(currentPrice)}
+                  </div>
+                </>
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
+                  No chart data available for this time range
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stats Grid - Only show if loading or has data */}
+        {(isLoading || stockData) && (
+          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
+            {isLoading ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-5" />
+                ))}
+              </div>
+            ) : stats ? (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Previous Close</span>
+                  <span className="font-medium">{stats.prevClose}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Open</span>
+                  <span className="font-medium">{stats.open}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Day's Range</span>
+                  <span className="font-medium text-xs">{stats.dayRange}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">52-Week Range</span>
+                  <span className="font-medium text-xs">{stats.yearRange}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Market Cap</span>
+                  <span className="font-medium">{stats.marketCap}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">P/E Ratio</span>
+                  <span className="font-medium">{stats.peRatio}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">EPS</span>
+                  <span className="font-medium">{stats.eps}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Volume</span>
+                  <span className="font-medium">{stats.volume}</span>
+                </div>
+                <div className="flex justify-between col-span-2">
+                  <span className="text-muted-foreground">Avg. Volume</span>
+                  <span className="font-medium">{stats.avgVolume}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No statistics available</p>
+            )}
+          </div>
+        )}
 
         {/* Your Position - Only show if user owns this stock */}
         {holding && (

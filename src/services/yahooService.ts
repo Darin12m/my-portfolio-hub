@@ -51,6 +51,57 @@ const RANGE_CONFIG: Record<TimeRange, { range: string; interval: string }> = {
   'MAX': { range: 'max', interval: '1mo' },
 };
 
+/**
+ * Sanitizes a stock symbol by:
+ * - Trimming whitespace
+ * - Extracting the ticker from formats like "NVDA · STOCK" or "NVIDIA NVDA"
+ * - Converting to uppercase
+ * - Validating it looks like a valid ticker (1-5 uppercase letters)
+ */
+export function sanitizeSymbol(rawSymbol: string | undefined): string | null {
+  if (!rawSymbol) return null;
+  
+  // Trim and uppercase
+  let symbol = rawSymbol.trim().toUpperCase();
+  
+  // Handle "TICKER · STOCK" format
+  if (symbol.includes('·')) {
+    symbol = symbol.split('·')[0].trim();
+  }
+  
+  // Handle "TICKER - DESCRIPTION" format
+  if (symbol.includes('-')) {
+    symbol = symbol.split('-')[0].trim();
+  }
+  
+  // Handle "Company Name TICKER" - take the last word if it looks like a ticker
+  const parts = symbol.split(/\s+/);
+  if (parts.length > 1) {
+    // Check if last part is a valid ticker (1-5 uppercase letters)
+    const lastPart = parts[parts.length - 1];
+    if (/^[A-Z]{1,5}$/.test(lastPart)) {
+      symbol = lastPart;
+    } else {
+      // Try first part
+      symbol = parts[0];
+    }
+  }
+  
+  // Validate: must be 1-5 uppercase letters (standard US stock tickers)
+  if (!/^[A-Z]{1,5}$/.test(symbol)) {
+    return null;
+  }
+  
+  return symbol;
+}
+
+/**
+ * Check if a symbol is valid
+ */
+export function isValidSymbol(symbol: string | undefined): boolean {
+  return sanitizeSymbol(symbol) !== null;
+}
+
 function formatTimeLabel(timestamp: number, range: TimeRange): string {
   const date = new Date(timestamp * 1000);
   
@@ -102,7 +153,14 @@ export interface StockData {
   };
 }
 
-export async function fetchStockData(symbol: string, timeRange: TimeRange = '1Y'): Promise<StockData | null> {
+export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '1Y'): Promise<StockData | null> {
+  // Sanitize the symbol first
+  const symbol = sanitizeSymbol(rawSymbol);
+  if (!symbol) {
+    console.error('Invalid symbol:', rawSymbol);
+    return null;
+  }
+  
   try {
     const { range, interval } = RANGE_CONFIG[timeRange];
     const url = `${API_BASE}/yahoo-price?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`;
@@ -115,47 +173,55 @@ export async function fetchStockData(symbol: string, timeRange: TimeRange = '1Y'
     
     const data = await response.json();
     
-    // Handle API response structure
+    // Handle API response structure - be lenient with partial data
     const result = data?.chart?.result?.[0];
-    if (!result) {
+    if (!result?.meta) {
       console.error('Invalid Yahoo response structure');
       return null;
     }
     
-    const meta = result.meta || {};
+    const meta = result.meta;
     const timestamps = result.timestamp || [];
     const quotes = result.indicators?.quote?.[0] || {};
     const closes = quotes.close || [];
     
-    // Build quote data
+    // Get price with fallbacks
+    const regularMarketPrice = meta.regularMarketPrice ?? 
+                               closes[closes.length - 1] ?? 
+                               meta.chartPreviousClose ?? 
+                               meta.previousClose ?? 0;
+    
+    const previousClose = meta.chartPreviousClose ?? meta.previousClose ?? regularMarketPrice;
+    
+    // Build quote data with safe fallbacks
     const quote: YahooQuote = {
       symbol: meta.symbol || symbol,
       shortName: meta.shortName || symbol,
       longName: meta.longName || meta.shortName || symbol,
-      regularMarketPrice: meta.regularMarketPrice || closes[closes.length - 1] || 0,
-      regularMarketChange: (meta.regularMarketPrice || 0) - (meta.chartPreviousClose || meta.previousClose || 0),
-      regularMarketChangePercent: meta.chartPreviousClose 
-        ? ((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100 
+      regularMarketPrice,
+      regularMarketChange: regularMarketPrice - previousClose,
+      regularMarketChangePercent: previousClose > 0 
+        ? ((regularMarketPrice - previousClose) / previousClose) * 100 
         : 0,
-      regularMarketPreviousClose: meta.chartPreviousClose || meta.previousClose || 0,
-      regularMarketOpen: meta.regularMarketOpen || quotes.open?.[0] || 0,
-      regularMarketDayLow: meta.regularMarketDayLow || Math.min(...closes.filter(Boolean)) || 0,
-      regularMarketDayHigh: meta.regularMarketDayHigh || Math.max(...closes.filter(Boolean)) || 0,
-      fiftyTwoWeekLow: meta.fiftyTwoWeekLow || 0,
-      fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh || 0,
-      marketCap: meta.marketCap || 0,
-      regularMarketVolume: meta.regularMarketVolume || 0,
-      averageDailyVolume10Day: meta.averageDailyVolume10Day || 0,
+      regularMarketPreviousClose: previousClose,
+      regularMarketOpen: meta.regularMarketOpen ?? quotes.open?.[0] ?? regularMarketPrice,
+      regularMarketDayLow: meta.regularMarketDayLow ?? (closes.length > 0 ? Math.min(...closes.filter(Boolean)) : regularMarketPrice),
+      regularMarketDayHigh: meta.regularMarketDayHigh ?? (closes.length > 0 ? Math.max(...closes.filter(Boolean)) : regularMarketPrice),
+      fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? 0,
+      fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? 0,
+      marketCap: meta.marketCap ?? 0,
+      regularMarketVolume: meta.regularMarketVolume ?? 0,
+      averageDailyVolume10Day: meta.averageDailyVolume10Day ?? 0,
       trailingPE: meta.trailingPE,
       epsTrailingTwelveMonths: meta.epsTrailingTwelveMonths,
       marketState: getMarketState(),
     };
     
-    // Build chart data
+    // Build chart data - filter out invalid points
     const chartData: ChartDataPoint[] = timestamps
       .map((time: number, i: number) => {
         const value = closes[i];
-        if (value == null || isNaN(value)) return null;
+        if (value == null || isNaN(value) || value <= 0) return null;
         return {
           time,
           value,
@@ -164,15 +230,21 @@ export async function fetchStockData(symbol: string, timeRange: TimeRange = '1Y'
       })
       .filter(Boolean) as ChartDataPoint[];
     
-    // Build stats
+    // Build stats with safe formatting
+    const formatPrice = (val: number) => val > 0 ? `$${val.toFixed(2)}` : 'N/A';
+    
     const stats = {
-      prevClose: `$${quote.regularMarketPreviousClose.toFixed(2)}`,
-      open: `$${quote.regularMarketOpen.toFixed(2)}`,
-      dayRange: `$${quote.regularMarketDayLow.toFixed(2)} - $${quote.regularMarketDayHigh.toFixed(2)}`,
-      yearRange: `$${quote.fiftyTwoWeekLow.toFixed(2)} - $${quote.fiftyTwoWeekHigh.toFixed(2)}`,
-      marketCap: formatMarketCap(quote.marketCap),
-      volume: formatVolume(quote.regularMarketVolume),
-      avgVolume: formatVolume(quote.averageDailyVolume10Day),
+      prevClose: formatPrice(quote.regularMarketPreviousClose),
+      open: formatPrice(quote.regularMarketOpen),
+      dayRange: quote.regularMarketDayLow > 0 && quote.regularMarketDayHigh > 0
+        ? `$${quote.regularMarketDayLow.toFixed(2)} - $${quote.regularMarketDayHigh.toFixed(2)}`
+        : 'N/A',
+      yearRange: quote.fiftyTwoWeekLow > 0 && quote.fiftyTwoWeekHigh > 0
+        ? `$${quote.fiftyTwoWeekLow.toFixed(2)} - $${quote.fiftyTwoWeekHigh.toFixed(2)}`
+        : 'N/A',
+      marketCap: quote.marketCap > 0 ? formatMarketCap(quote.marketCap) : 'N/A',
+      volume: quote.regularMarketVolume > 0 ? formatVolume(quote.regularMarketVolume) : 'N/A',
+      avgVolume: quote.averageDailyVolume10Day > 0 ? formatVolume(quote.averageDailyVolume10Day) : 'N/A',
       peRatio: quote.trailingPE ? quote.trailingPE.toFixed(2) : 'N/A',
       eps: quote.epsTrailingTwelveMonths ? `$${quote.epsTrailingTwelveMonths.toFixed(2)}` : 'N/A',
     };
@@ -184,7 +256,13 @@ export async function fetchStockData(symbol: string, timeRange: TimeRange = '1Y'
   }
 }
 
-export async function fetchStockNews(symbol: string): Promise<YahooNews[]> {
+export async function fetchStockNews(rawSymbol: string): Promise<YahooNews[]> {
+  // Sanitize the symbol first
+  const symbol = sanitizeSymbol(rawSymbol);
+  if (!symbol) {
+    return [];
+  }
+  
   try {
     const url = `${API_BASE}/yahoo-news?symbol=${encodeURIComponent(symbol)}`;
     
@@ -206,7 +284,7 @@ export async function fetchStockNews(symbol: string): Promise<YahooNews[]> {
       link: item.link || '',
       publisher: item.publisher || 'Unknown',
       providerPublishTime: item.providerPublishTime || 0,
-    }));
+    })).filter((item: YahooNews) => item.title && item.link);
   } catch (error) {
     console.error('Error fetching stock news:', error);
     return [];
