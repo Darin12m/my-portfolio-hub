@@ -111,9 +111,10 @@ export function calculateHoldings(
     const tickerTrades = trades.filter(t => t.ticker === ticker);
     const latestTrade = tickerTrades[0];
     
-    let allocationPercent: number = -1;
-    if (globalPortfolioTotal && globalPortfolioTotal > 0 && priceData) {
-      allocationPercent = (currentValue / globalPortfolioTotal) * 100;
+    // Calculate allocation - never negative
+    let allocationPercent = 0;
+    if (globalPortfolioTotal && globalPortfolioTotal > 0 && priceData && currentValue > 0) {
+      allocationPercent = Math.max(0, (currentValue / globalPortfolioTotal) * 100);
     }
     
     holdings.push({
