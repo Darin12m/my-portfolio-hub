@@ -1,7 +1,10 @@
-// Yahoo Finance API service using Vercel proxy endpoints
+// Yahoo Finance API service
 // STOCKS ONLY - no crypto
 
-const API_BASE = 'https://portfolio-hub-tau.vercel.app/api';
+const VERCEL_API_BASE = 'https://portfolio-hub-tau.vercel.app/api';
+const CORS_PROXY = 'https://corsproxy.io/?';
+const YAHOO_CHART_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
+const YAHOO_SEARCH_URL = 'https://query1.finance.yahoo.com/v1/finance/search';
 
 export interface YahooQuote {
   symbol: string;
@@ -163,15 +166,30 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
   
   try {
     const { range, interval } = RANGE_CONFIG[timeRange];
-    const url = `${API_BASE}/yahoo-price?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`;
     
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error('Yahoo price API error:', response.status);
-      return null;
+    // Try Vercel API first, fallback to CORS proxy
+    let data: any = null;
+    
+    try {
+      const vercelUrl = `${VERCEL_API_BASE}/yahoo-price?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`;
+      const response = await fetch(vercelUrl, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        data = await response.json();
+      }
+    } catch {
+      // Vercel API failed, try CORS proxy
     }
     
-    const data = await response.json();
+    if (!data) {
+      const yahooUrl = `${YAHOO_CHART_URL}/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
+      const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
+      const response = await fetch(corsUrl);
+      if (!response.ok) {
+        console.error('Yahoo price API error:', response.status);
+        return null;
+      }
+      data = await response.json();
+    }
     
     // Handle API response structure - be lenient with partial data
     const result = data?.chart?.result?.[0];
@@ -264,17 +282,33 @@ export async function fetchStockNews(rawSymbol: string): Promise<YahooNews[]> {
   }
   
   try {
-    const url = `${API_BASE}/yahoo-news?symbol=${encodeURIComponent(symbol)}`;
+    let data: any = null;
     
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error('Yahoo news API error:', response.status);
-      return [];
+    // Try Vercel API first, fallback to CORS proxy
+    try {
+      const vercelUrl = `${VERCEL_API_BASE}/yahoo-news?symbol=${encodeURIComponent(symbol)}`;
+      const response = await fetch(vercelUrl, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        data = await response.json();
+      }
+    } catch {
+      // Vercel API failed, try CORS proxy
     }
     
-    const data = await response.json();
+    if (!data) {
+      const yahooUrl = `${YAHOO_SEARCH_URL}?q=${encodeURIComponent(symbol)}&newsCount=5`;
+      const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
+      const response = await fetch(corsUrl);
+      if (!response.ok) {
+        console.error('Yahoo news API error:', response.status);
+        return [];
+      }
+      data = await response.json();
+      // Extract news from search response
+      data = data?.news || [];
+    }
     
-    // The API returns an array of news items
+    // Handle array response
     if (!Array.isArray(data)) {
       return [];
     }
