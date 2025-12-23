@@ -5,7 +5,7 @@ const VERCEL_API_BASE = 'https://portfolio-hub-tau.vercel.app/api';
 const CORS_PROXY = 'https://corsproxy.io/?';
 const YAHOO_CHART_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
 const YAHOO_SEARCH_URL = 'https://query1.finance.yahoo.com/v1/finance/search';
-const YAHOO_QUOTE_SUMMARY_URL = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary';
+const YAHOO_QUOTE_URL = 'https://query1.finance.yahoo.com/v6/finance/quote';
 
 export interface YahooQuote {
   symbol: string;
@@ -158,38 +158,37 @@ export interface StockData {
 }
 
 /**
- * Fetch additional fundamentals from quoteSummary endpoint
+ * Fetch additional fundamentals from v6/quote endpoint
  */
-async function fetchQuoteSummary(symbol: string): Promise<{
+async function fetchQuoteFundamentals(symbol: string): Promise<{
   marketCap?: number;
   trailingPE?: number;
   epsTrailingTwelveMonths?: number;
   averageVolume?: number;
+  fiftyTwoWeekLow?: number;
+  fiftyTwoWeekHigh?: number;
 } | null> {
   try {
-    const modules = 'price,summaryDetail,defaultKeyStatistics';
-    const yahooUrl = `${YAHOO_QUOTE_SUMMARY_URL}/${encodeURIComponent(symbol)}?modules=${modules}`;
+    const yahooUrl = `${YAHOO_QUOTE_URL}?symbols=${encodeURIComponent(symbol)}`;
     const corsUrl = `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`;
     
     const response = await fetch(corsUrl, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return null;
     
     const data = await response.json();
-    const result = data?.quoteSummary?.result?.[0];
+    const result = data?.quoteResponse?.result?.[0];
     if (!result) return null;
     
-    const price = result.price || {};
-    const summaryDetail = result.summaryDetail || {};
-    const keyStats = result.defaultKeyStatistics || {};
-    
     return {
-      marketCap: price.marketCap?.raw || summaryDetail.marketCap?.raw,
-      trailingPE: summaryDetail.trailingPE?.raw || keyStats.trailingPE?.raw,
-      epsTrailingTwelveMonths: keyStats.trailingEps?.raw || summaryDetail.trailingEps?.raw,
-      averageVolume: summaryDetail.averageVolume?.raw || price.averageDailyVolume10Day?.raw,
+      marketCap: result.marketCap,
+      trailingPE: result.trailingPE,
+      epsTrailingTwelveMonths: result.epsTrailingTwelveMonths,
+      averageVolume: result.averageDailyVolume3Month || result.averageDailyVolume10Day,
+      fiftyTwoWeekLow: result.fiftyTwoWeekLow,
+      fiftyTwoWeekHigh: result.fiftyTwoWeekHigh,
     };
   } catch (error) {
-    console.warn('quoteSummary fetch failed, using chart data only:', error);
+    console.warn('Quote fundamentals fetch failed, using chart data only:', error);
     return null;
   }
 }
@@ -205,11 +204,11 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
   try {
     const { range, interval } = RANGE_CONFIG[timeRange];
     
-    // Fetch chart data and quoteSummary in parallel
+    // Fetch chart data and quote fundamentals in parallel
     let chartData: any = null;
-    let summaryData: Awaited<ReturnType<typeof fetchQuoteSummary>> = null;
+    let summaryData: Awaited<ReturnType<typeof fetchQuoteFundamentals>> = null;
     
-    const [chartResult, summaryResult] = await Promise.allSettled([
+    const [chartResult, fundamentalsResult] = await Promise.allSettled([
       (async () => {
         // Try Vercel API first, fallback to CORS proxy
         try {
@@ -230,14 +229,14 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
         }
         return await response.json();
       })(),
-      fetchQuoteSummary(symbol)
+      fetchQuoteFundamentals(symbol)
     ]);
     
     if (chartResult.status === 'fulfilled') {
       chartData = chartResult.value;
     }
-    if (summaryResult.status === 'fulfilled') {
-      summaryData = summaryResult.value;
+    if (fundamentalsResult.status === 'fulfilled') {
+      summaryData = fundamentalsResult.value;
     }
     
     if (!chartData) {
@@ -265,11 +264,13 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
     
     const previousClose = meta.chartPreviousClose ?? meta.previousClose ?? regularMarketPrice;
     
-    // Merge fundamentals: prefer quoteSummary, fallback to chart meta
+    // Merge fundamentals: prefer quote endpoint, fallback to chart meta
     const marketCap = summaryData?.marketCap || meta.marketCap || 0;
     const trailingPE = summaryData?.trailingPE || meta.trailingPE;
     const epsTrailingTwelveMonths = summaryData?.epsTrailingTwelveMonths || meta.epsTrailingTwelveMonths;
     const averageVolume = summaryData?.averageVolume || meta.averageDailyVolume10Day || 0;
+    const fiftyTwoWeekLow = summaryData?.fiftyTwoWeekLow || meta.fiftyTwoWeekLow || 0;
+    const fiftyTwoWeekHigh = summaryData?.fiftyTwoWeekHigh || meta.fiftyTwoWeekHigh || 0;
     
     // Build quote data with safe fallbacks
     const quote: YahooQuote = {
@@ -285,8 +286,8 @@ export async function fetchStockData(rawSymbol: string, timeRange: TimeRange = '
       regularMarketOpen: meta.regularMarketOpen ?? quotes.open?.[0] ?? regularMarketPrice,
       regularMarketDayLow: meta.regularMarketDayLow ?? (closes.length > 0 ? Math.min(...closes.filter(Boolean)) : regularMarketPrice),
       regularMarketDayHigh: meta.regularMarketDayHigh ?? (closes.length > 0 ? Math.max(...closes.filter(Boolean)) : regularMarketPrice),
-      fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? 0,
-      fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? 0,
+      fiftyTwoWeekLow,
+      fiftyTwoWeekHigh,
       marketCap,
       regularMarketVolume: meta.regularMarketVolume ?? 0,
       averageDailyVolume10Day: averageVolume,
