@@ -401,39 +401,39 @@ export default function AssetDetail() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Previous Close</span>
-                  <span className="font-medium">{stats.prevClose}</span>
+                  <span className={cn("font-medium", stats.prevClose === 'N/A' && "text-muted-foreground")}>{stats.prevClose === 'N/A' ? '—' : stats.prevClose}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Open</span>
-                  <span className="font-medium">{stats.open}</span>
+                  <span className={cn("font-medium", stats.open === 'N/A' && "text-muted-foreground")}>{stats.open === 'N/A' ? '—' : stats.open}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Day's Range</span>
-                  <span className="font-medium text-xs">{stats.dayRange}</span>
+                  <span className={cn("font-medium text-xs", stats.dayRange === 'N/A' && "text-muted-foreground")}>{stats.dayRange === 'N/A' ? '—' : stats.dayRange}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">52-Week Range</span>
-                  <span className="font-medium text-xs">{stats.yearRange}</span>
+                  <span className={cn("font-medium text-xs", stats.yearRange === 'N/A' && "text-muted-foreground")}>{stats.yearRange === 'N/A' ? '—' : stats.yearRange}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Market Cap</span>
-                  <span className="font-medium">{stats.marketCap}</span>
+                  <span className={cn("font-medium", stats.marketCap === 'N/A' && "text-muted-foreground")}>{stats.marketCap === 'N/A' ? '—' : stats.marketCap}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">P/E Ratio</span>
-                  <span className="font-medium">{stats.peRatio}</span>
+                  <span className={cn("font-medium", stats.peRatio === 'N/A' && "text-muted-foreground")}>{stats.peRatio === 'N/A' ? '—' : stats.peRatio}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">EPS</span>
-                  <span className="font-medium">{stats.eps}</span>
+                  <span className={cn("font-medium", stats.eps === 'N/A' && "text-muted-foreground")}>{stats.eps === 'N/A' ? '—' : stats.eps}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Volume</span>
-                  <span className="font-medium">{stats.volume}</span>
+                  <span className={cn("font-medium", stats.volume === 'N/A' && "text-muted-foreground")}>{stats.volume === 'N/A' ? '—' : stats.volume}</span>
                 </div>
                 <div className="flex justify-between col-span-2">
                   <span className="text-muted-foreground">Avg. Volume</span>
-                  <span className="font-medium">{stats.avgVolume}</span>
+                  <span className={cn("font-medium", stats.avgVolume === 'N/A' && "text-muted-foreground")}>{stats.avgVolume === 'N/A' ? '—' : stats.avgVolume}</span>
                 </div>
               </div>
             ) : (
@@ -467,7 +467,13 @@ export default function AssetDetail() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Allocation</span>
-                <span className="font-semibold">{holding.allocationPercent.toFixed(1)}%</span>
+                <span className="font-semibold">
+                  {holding.allocationPercent <= 0 
+                    ? '—' 
+                    : holding.allocationPercent < 0.1 
+                      ? '<0.1%' 
+                      : `${holding.allocationPercent.toFixed(1)}%`}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Holding Period</span>
