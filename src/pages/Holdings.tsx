@@ -189,7 +189,7 @@ export default function Holdings() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
+      <header className="bg-card shadow-soft sticky top-0 z-10 safe-area-top">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold">Portfolio</h1>

@@ -171,7 +171,7 @@ export default function AssetDetail() {
             "{rawSymbol}" is not a valid stock symbol. Please check and try again.
           </p>
         </div>
-        <Button onClick={() => navigate(-1)} variant="outline">
+        <Button onClick={() => navigate(-1)} variant="outline" className="rounded-xl">
           <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -181,7 +181,7 @@ export default function AssetDetail() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
+      <header className="bg-card shadow-soft sticky top-0 z-10 safe-area-top">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Button 
@@ -220,7 +220,7 @@ export default function AssetDetail() {
       <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom">
         {/* Error State with Retry */}
         {error && !stockData && !isLoading && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center space-y-3">
+          <div className="bg-destructive/10 rounded-2xl p-6 text-center space-y-3">
             <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
             <div>
               <h3 className="font-semibold text-destructive">{error}</h3>
@@ -228,7 +228,7 @@ export default function AssetDetail() {
                 We couldn't fetch data for {symbol}. Please try again.
               </p>
             </div>
-            <Button onClick={handleRefresh} variant="outline" size="sm">
+            <Button onClick={handleRefresh} variant="outline" size="sm" className="rounded-xl">
               <RefreshCw className="h-4 w-4 mr-2" /> Retry
             </Button>
           </div>
@@ -249,11 +249,11 @@ export default function AssetDetail() {
               </div>
               <div className="flex items-center gap-2">
                 {isPositive ? (
-                  <TrendingUp className="h-4 w-4 text-success" />
+                  <TrendingUp className="h-4 w-4 text-profit" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-destructive" />
+                  <TrendingDown className="h-4 w-4 text-loss" />
                 )}
-                <span className={cn("text-sm font-semibold", isPositive ? "text-success" : "text-destructive")}>
+                <span className={cn("text-sm font-semibold", isPositive ? "text-profit" : "text-loss")}>
                   {isPositive ? '+' : ''}{formatCurrency(Math.abs(priceChange))} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
                 </span>
                 <span className="text-xs text-muted-foreground">Today</span>
@@ -264,7 +264,7 @@ export default function AssetDetail() {
 
         {/* Trading Chart - Only show if loading or has data */}
         {(isLoading || stockData) && (
-          <div className="trading-chart-container">
+          <div className="card-soft p-4">
             {/* Time Range Tabs */}
             <div className="flex items-center gap-1 mb-4 overflow-x-auto scroll-smooth-x pb-1">
               {TIME_RANGES.map((range) => (
@@ -273,10 +273,10 @@ export default function AssetDetail() {
                   onClick={() => setTimeRange(range)}
                   disabled={isLoading}
                   className={cn(
-                    "px-3 py-1.5 text-xs font-medium rounded-md transition-all touch-target min-w-[40px]",
+                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all touch-target min-w-[40px]",
                     timeRange === range
-                      ? "bg-chart-active text-chart-active-foreground"
-                      : "text-chart-muted hover:text-chart-foreground",
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     isLoading && "opacity-50"
                   )}
                 >
@@ -289,7 +289,7 @@ export default function AssetDetail() {
             <div className="h-56 w-full relative">
               {isLoading ? (
                 <div className="h-full w-full flex items-center justify-center">
-                  <Skeleton className="h-full w-full rounded-lg" />
+                  <Skeleton className="h-full w-full rounded-xl" />
                 </div>
               ) : chartData.length > 0 ? (
                 <>
@@ -300,12 +300,12 @@ export default function AssetDetail() {
                     >
                       <defs>
                         <linearGradient id="assetProfitGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.2} />
-                          <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
+                          <stop offset="0%" stopColor="hsl(var(--profit))" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="hsl(var(--profit))" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="assetLossGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
-                          <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.2} />
+                          <stop offset="0%" stopColor="hsl(var(--loss))" stopOpacity={0} />
+                          <stop offset="100%" stopColor="hsl(var(--loss))" stopOpacity={0.2} />
                         </linearGradient>
                       </defs>
                       
@@ -313,14 +313,14 @@ export default function AssetDetail() {
                         dataKey="label" 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
                         interval="preserveStartEnd"
                       />
                       <YAxis 
                         domain={[minValue - padding, maxValue + padding]}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 9 }}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
                         tickFormatter={(val) => `$${val.toFixed(0)}`}
                         orientation="right"
                         width={45}
@@ -328,14 +328,14 @@ export default function AssetDetail() {
                       
                       <ReferenceLine 
                         y={baseline} 
-                        stroke="hsl(var(--chart-baseline))"
+                        stroke="hsl(var(--muted-foreground) / 0.3)"
                         strokeDasharray="4 4"
                         strokeWidth={1}
                       />
                       
                       <ReferenceLine 
                         y={currentPrice} 
-                        stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+                        stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
                         strokeDasharray="2 2"
                         strokeWidth={1.5}
                       />
@@ -345,23 +345,23 @@ export default function AssetDetail() {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
                             return (
-                              <div className="bg-chart-popover border border-chart-border rounded-lg px-3 py-2 shadow-xl">
-                                <p className="text-sm font-semibold text-chart-foreground">
+                              <div className="bg-card border border-border/50 rounded-xl px-3 py-2 shadow-soft-lg">
+                                <p className="text-sm font-semibold">
                                   {formatCurrency(data.value)}
                                 </p>
-                                <p className="text-xs text-chart-muted">{data.label}</p>
+                                <p className="text-xs text-muted-foreground">{data.label}</p>
                               </div>
                             );
                           }
                           return null;
                         }}
-                        cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1, strokeDasharray: '4 4' }}
                       />
                       
                       <Area
                         type="monotone"
                         dataKey="value"
-                        stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+                        stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
                         strokeWidth={2}
                         fill={isPositive ? 'url(#assetProfitGradient)' : 'url(#assetLossGradient)'}
                         animationDuration={400}
@@ -372,8 +372,8 @@ export default function AssetDetail() {
                   {/* Current Price Badge */}
                   <div 
                     className={cn(
-                      "absolute right-0 px-2 py-0.5 rounded text-[10px] font-semibold",
-                      isPositive ? "bg-chart-profit text-white" : "bg-chart-loss text-white"
+                      "absolute right-0 px-2 py-0.5 rounded-lg text-[10px] font-semibold text-white",
+                      isPositive ? "bg-profit" : "bg-loss"
                     )}
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
                   >
@@ -391,8 +391,8 @@ export default function AssetDetail() {
 
         {/* Stats Grid - Only show if loading or has data */}
         {(isLoading || stockData) && (
-          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
+          <div className="card-soft p-4 space-y-3">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
             {isLoading ? (
               <div className="grid grid-cols-2 gap-3">
                 {[...Array(8)].map((_, i) => (
@@ -446,8 +446,8 @@ export default function AssetDetail() {
 
         {/* Your Position - Only show if user owns this stock */}
         {holding && (
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 rounded-xl p-4 space-y-3">
-            <h3 className="text-xs font-semibold text-primary uppercase tracking-wider">Your Position</h3>
+          <div className="bg-primary/5 rounded-2xl p-4 space-y-3">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider">Your Position</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shares</span>
@@ -463,7 +463,7 @@ export default function AssetDetail() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Unrealized P/L</span>
-                <span className={cn("font-semibold", holding.unrealizedPL >= 0 ? "text-success" : "text-destructive")}>
+                <span className={cn("font-semibold", holding.unrealizedPL >= 0 ? "text-profit" : "text-loss")}>
                   {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)} ({formatPercent(holding.unrealizedPLPercent)})
                 </span>
               </div>
@@ -486,8 +486,8 @@ export default function AssetDetail() {
         )}
 
         {/* News Section */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
+        <div className="card-soft p-4 space-y-3">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent News</h3>
           {isNewsLoading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
@@ -505,7 +505,7 @@ export default function AssetDetail() {
                   href={item.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block border-b border-border/50 pb-3 last:border-0 last:pb-0 hover:bg-muted/30 -mx-2 px-2 py-1 rounded transition-colors"
+                  className="block border-b border-border/30 pb-3 last:border-0 last:pb-0 hover:bg-muted/20 -mx-2 px-2 py-1 rounded-xl transition-colors"
                 >
                   <p className="text-sm font-medium leading-tight line-clamp-2">{item.title}</p>
                   <div className="flex items-center gap-2 mt-1">

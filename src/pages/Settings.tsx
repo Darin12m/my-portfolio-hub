@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sun, Moon, Monitor, Trash2, Pencil, Check, Wallet, ChevronRight, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Trash2, Pencil, Check, Wallet, ChevronRight, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useTheme } from '@/hooks/use-theme';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -20,7 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser, signOut } from '@/lib/auth';
 
 export default function Settings() {
-  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
   const user = getCurrentUser();
@@ -30,12 +28,6 @@ export default function Settings() {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(portfolioName);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const themeOptions = [
-    { value: 'light' as const, label: 'Light', icon: Sun },
-    { value: 'dark' as const, label: 'Dark', icon: Moon },
-    { value: 'system' as const, label: 'System', icon: Monitor },
-  ];
 
   const handleSaveName = () => {
     if (editValue.trim()) {
@@ -74,7 +66,7 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10 safe-area-top">
+      <header className="bg-card shadow-soft sticky top-0 z-10 safe-area-top">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link to="/">
@@ -87,14 +79,14 @@ export default function Settings() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 space-y-8 safe-area-bottom">
+      <main className="container mx-auto px-4 py-6 space-y-6 safe-area-bottom">
         {/* Account Section */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        <section className="space-y-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
             Account
           </h2>
           
-          <div className="bg-card rounded-lg border border-border p-4 space-y-4">
+          <div className="card-soft p-4 space-y-4">
             {/* User Info */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -107,7 +99,7 @@ export default function Settings() {
             </div>
 
             {/* Logout Button */}
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-border/30">
               <Button 
                 variant="outline" 
                 className="w-full gap-2 touch-target" 
@@ -121,43 +113,14 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Theme Section */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Appearance
-          </h2>
-          <div className="grid grid-cols-3 gap-3">
-            {themeOptions.map((option) => {
-              const Icon = option.icon;
-              const isActive = theme === option.value;
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-lg border transition-all touch-target',
-                    'active:scale-[0.98]',
-                    isActive
-                      ? 'bg-primary/10 border-primary text-primary'
-                      : 'bg-card border-border hover:border-primary/50'
-                  )}
-                >
-                  <Icon className="h-6 w-6" />
-                  <span className="text-sm font-medium">{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         {/* Crypto Accounts Section */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        <section className="space-y-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
             Crypto Accounts
           </h2>
           
           <Link to="/settings/crypto">
-            <div className="bg-card rounded-lg border border-border p-4 flex items-center justify-between hover:border-primary/50 transition-colors cursor-pointer touch-feedback">
+            <div className="card-soft p-4 flex items-center justify-between hover:shadow-soft-lg transition-shadow cursor-pointer touch-feedback">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Wallet className="h-5 w-5 text-primary" />
@@ -175,12 +138,12 @@ export default function Settings() {
         </section>
 
         {/* Portfolio Section */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        <section className="space-y-3">
+          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
             Portfolio
           </h2>
           
-          <div className="bg-card rounded-lg border border-border p-4 space-y-4">
+          <div className="card-soft p-4 space-y-4">
             {/* Portfolio Name */}
             <div className="flex items-center justify-between gap-4">
               {isEditing ? (
@@ -224,7 +187,7 @@ export default function Settings() {
             </div>
 
             {/* Delete Portfolio */}
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-border/30">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="w-full gap-2 touch-target">
