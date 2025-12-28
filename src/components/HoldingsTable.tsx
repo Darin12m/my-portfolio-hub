@@ -111,7 +111,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-border/50 bg-card">
+      <div className="card-soft">
         <div className="p-8 text-center">
           <div className="animate-pulse-subtle text-muted-foreground">
             Loading holdings...
@@ -123,7 +123,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (holdings.length === 0) {
     return (
-      <div className="rounded-lg border border-border/50 bg-card">
+      <div className="card-soft">
         <div className="p-10 text-center">
           <p className="text-muted-foreground">No holdings yet</p>
           <p className="text-sm text-muted-foreground/60 mt-1">
@@ -135,9 +135,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
   }
 
   return (
-    <div className="rounded-lg border border-border/50 bg-card overflow-hidden">
+    <div className="card-soft overflow-hidden">
       {/* Table Header with count/selection */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/30 bg-muted/20">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
         <span className="text-xs font-medium text-muted-foreground">
           {isEditMode ? `${selectedTickers.size} selected` : `${holdings.length} Holdings`}
         </span>
@@ -158,9 +158,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
           {/* Table Header Row */}
-          <div className="grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] bg-muted/10">
+          <div className="grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] bg-muted/30">
             {/* Security Header */}
-            <div className="py-2 px-3">
+            <div className="py-2.5 px-4">
               <button
                 onClick={() => handleSort('name')}
                 className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
@@ -172,7 +172,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
 
             {/* Shares Header */}
-            <div className="py-2 px-2 text-center">
+            <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('shares')}
                 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
@@ -183,7 +183,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
 
             {/* Avg Cost Header */}
-            <div className="py-2 px-2 text-center">
+            <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('cashflow')}
                 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
@@ -194,7 +194,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
 
             {/* Value Header */}
-            <div className="py-2 px-2 text-center">
+            <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('value')}
                 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
@@ -205,7 +205,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
 
             {/* P/L Header */}
-            <div className="py-2 px-2 text-center">
+            <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('pl')}
                 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
@@ -216,7 +216,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
 
             {/* Allocation Header */}
-            <div className="py-2 px-2 text-center">
+            <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('allocation')}
                 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
@@ -227,37 +227,38 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
           </div>
 
-          {/* Table Body */}
-          <div className="divide-y divide-border/20">
-            {sortedHoldings.map((holding) => (
+          {/* Table Body - Mobile-friendly card layout with liquid allocation */}
+          <div className="divide-y divide-border/10">
+            {sortedHoldings.map((holding, index) => (
               <div
                 key={holding.ticker}
                 onClick={() => handleRowClick(holding)}
                 className={cn(
-                  "grid grid-cols-[minmax(160px,1.5fr)_repeat(5,1fr)] cursor-pointer",
-                  "transition-colors duration-100",
+                  "relative grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] cursor-pointer",
+                  "transition-all duration-200",
                   selectedTickers.has(holding.ticker) && "bg-primary/5",
-                  !isEditMode && "hover:bg-muted/30"
+                  !isEditMode && "hover:bg-muted/20",
+                  "animate-fade-in"
                 )}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
-                {/* Security Cell */}
-                <div className="py-2.5 px-3 relative overflow-hidden">
-                  {/* Allocation Bar */}
-                  <div 
-                    className="absolute inset-y-0.5 left-0 right-0 pointer-events-none"
-                    aria-hidden="true"
-                  >
-                    <div 
-                      className="h-full rounded-r allocation-bar-subtle"
-                      style={{ 
-                        width: holding.allocationPercent >= 0 ? `${Math.min(holding.allocationPercent, 100)}%` : '0%',
-                        minWidth: holding.allocationPercent > 0 ? '2px' : '0',
-                      }}
-                    />
-                  </div>
+                {/* LIQUID ALLOCATION BACKGROUND - Design 1 Core Feature */}
+                <div 
+                  className="absolute inset-y-1 left-1 rounded-full liquid-allocation pointer-events-none"
+                  style={{ 
+                    width: holding.allocationPercent >= 0 
+                      ? `${Math.max(Math.min(holding.allocationPercent, 100), 0)}%` 
+                      : '0%',
+                    minWidth: holding.allocationPercent > 0 ? '8px' : '0',
+                    height: '65%',
+                    top: '17.5%',
+                  }}
+                  aria-hidden="true"
+                />
 
-                  {/* Content */}
-                  <div className="flex items-center gap-2 relative z-10">
+                {/* Security Cell */}
+                <div className="py-3 px-4 relative z-10">
+                  <div className="flex items-center gap-3">
                     {/* Checkbox */}
                     <Checkbox
                       checked={selectedTickers.has(holding.ticker)}
@@ -279,32 +280,32 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                     {/* Name & Ticker */}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate leading-tight">
-                        {holding.ticker}
+                        {holding.name}
                       </p>
                       <p className="text-[10px] text-muted-foreground truncate">
-                        {holding.name}
+                        {holding.ticker}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Shares */}
-                <div className="py-2.5 px-2 text-center flex items-center justify-center">
-                  <p className="text-sm font-medium">{formatQuantity(holding.shares)}</p>
+                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
+                  <p className="text-sm">{formatQuantity(holding.shares)}</p>
                 </div>
 
                 {/* Avg Cost */}
-                <div className="py-2.5 px-2 text-center flex items-center justify-center">
-                  <p className="text-sm">{formatCurrency(holding.averageBuyPrice)}</p>
+                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
+                  <p className="text-sm text-muted-foreground">{formatCurrency(holding.averageBuyPrice)}</p>
                 </div>
 
                 {/* Current Value */}
-                <div className="py-2.5 px-2 text-center flex items-center justify-center">
+                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
                   <p className="text-sm font-medium">{formatCurrency(holding.currentValue)}</p>
                 </div>
 
                 {/* P/L */}
-                <div className="py-2.5 px-2 text-center flex flex-col items-center justify-center">
+                <div className="py-3 px-2 text-center flex flex-col items-center justify-center relative z-10">
                   <p className={cn(
                     "text-sm font-medium",
                     holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
@@ -319,9 +320,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                   </p>
                 </div>
 
-                {/* Allocation */}
-                <div className="py-2.5 px-2 text-center flex items-center justify-center">
-                  <p className="text-sm">
+                {/* Allocation - subtle, right-aligned */}
+                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
+                  <p className="text-sm text-muted-foreground">
                     {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
                   </p>
                 </div>

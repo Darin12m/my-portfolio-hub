@@ -71,7 +71,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       {/* Logo */}
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
           <TrendingUp className="h-6 w-6 text-primary" />
         </div>
         <span className="text-2xl font-bold">Portfolio Tracker</span>
@@ -79,7 +79,7 @@ export default function Auth() {
 
       {/* Auth Card */}
       <div className="w-full max-w-sm">
-        <div className="bg-card rounded-2xl border border-border p-6 shadow-lg">
+        <div className="card-soft p-6">
           <h1 className="text-xl font-semibold text-center mb-6">
             {isLogin ? 'Welcome back' : 'Create account'}
           </h1>
@@ -95,6 +95,7 @@ export default function Auth() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 autoComplete="email"
+                className="rounded-xl"
               />
             </div>
 
@@ -108,18 +109,19 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
+                className="rounded-xl"
               />
             </div>
 
             {error && (
-              <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+              <div className="text-sm text-destructive bg-destructive/10 rounded-xl p-3">
                 {error}
               </div>
             )}
 
             <Button 
               type="submit" 
-              className="w-full touch-target" 
+              className="w-full touch-target rounded-xl" 
               disabled={loading}
             >
               {loading ? (

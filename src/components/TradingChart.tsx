@@ -168,8 +168,8 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
   // No data state
   if (holdings.length === 0) {
     return (
-      <div className="trading-chart-container">
-        <div className="flex items-center justify-center h-56 text-muted-foreground">
+      <div className="card-soft p-6">
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
           <p>Import trades to see portfolio chart</p>
         </div>
       </div>
@@ -177,20 +177,20 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
   }
 
   return (
-    <div className="trading-chart-container">
+    <div className="card-soft p-4">
       {/* Chart Controls - Simplified */}
       <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         {/* Time Range Tabs */}
-        <div className="flex items-center gap-0.5 bg-chart-surface rounded-lg p-0.5 overflow-x-auto scroll-smooth-x">
+        <div className="flex items-center gap-0.5 bg-muted/50 rounded-xl p-0.5 overflow-x-auto scroll-smooth-x">
           {TIME_RANGES.map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
               className={cn(
-                "px-2.5 py-1 text-xs font-medium rounded-md transition-all min-w-[36px]",
+                "px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all min-w-[36px]",
                 timeRange === range
-                  ? "bg-chart-active text-chart-active-foreground"
-                  : "text-chart-muted hover:text-chart-foreground"
+                  ? "bg-card text-foreground shadow-soft"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {range}
@@ -204,7 +204,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-chart-muted hover:text-chart-foreground"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={handleRefresh}
             disabled={isLoading}
           >
@@ -214,11 +214,11 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
           {/* Baseline Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 text-xs text-chart-muted hover:text-chart-foreground">
+              <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
                 Baseline <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-chart-popover border-chart-border">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setBaselineType('Previous Close')}>
                 Previous Close
               </DropdownMenuItem>
@@ -233,20 +233,20 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
       {/* Price Header - Uses GREEN for profit, RED for loss */}
       <div className="mb-3">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-xl font-semibold text-chart-foreground">
+          <span className="text-xl font-semibold">
             {formatCurrency(currentPrice)}
           </span>
           <div className={cn(
             "flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-medium",
             isPositive 
-              ? "bg-chart-profit/10 text-chart-profit" 
-              : "bg-chart-loss/10 text-chart-loss"
+              ? "bg-profit/10 text-profit" 
+              : "bg-loss/10 text-loss"
           )}>
             <span>{isPositive ? '+' : ''}{formatCurrency(totalPL)}</span>
             <span>({isPositive ? '+' : ''}{totalPLPercent.toFixed(2)}%)</span>
           </div>
         </div>
-        <p className="text-xs text-chart-muted mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Total P/L from invested amount
         </p>
       </div>
@@ -261,13 +261,13 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
             <defs>
               {/* Green gradient for positive performance */}
               <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--chart-profit))" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="hsl(var(--chart-profit))" stopOpacity={0} />
+                <stop offset="0%" stopColor="hsl(var(--profit))" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="hsl(var(--profit))" stopOpacity={0} />
               </linearGradient>
               {/* Red gradient for negative performance */}
               <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--chart-loss))" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="hsl(var(--chart-loss))" stopOpacity={0} />
+                <stop offset="0%" stopColor="hsl(var(--loss))" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="hsl(var(--loss))" stopOpacity={0} />
               </linearGradient>
             </defs>
             
@@ -275,7 +275,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
               dataKey="label" 
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               interval="preserveStartEnd"
               tickCount={5}
             />
@@ -283,7 +283,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
               domain={[minValue - padding, maxValue + padding]}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--chart-muted))', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickFormatter={(val) => formatCurrency(val).replace('$', '')}
               orientation="right"
               width={50}
@@ -292,7 +292,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
             {/* Baseline Reference Line */}
             <ReferenceLine 
               y={baseline} 
-              stroke="hsl(var(--chart-baseline))"
+              stroke="hsl(var(--muted-foreground) / 0.3)"
               strokeDasharray="4 4"
               strokeWidth={1}
             />
@@ -300,7 +300,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
             {/* Current Price Reference Line */}
             <ReferenceLine 
               y={currentPrice} 
-              stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+              stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
               strokeDasharray="2 2"
               strokeWidth={1.5}
             />
@@ -310,24 +310,24 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="bg-chart-popover border border-chart-border rounded-lg px-3 py-2 shadow-xl">
-                      <p className="text-sm font-semibold text-chart-foreground">
+                    <div className="bg-card border border-border/50 rounded-xl px-3 py-2 shadow-soft-lg">
+                      <p className="text-sm font-semibold">
                         {formatCurrency(data.value)}
                       </p>
-                      <p className="text-xs text-chart-muted">{data.label}</p>
+                      <p className="text-xs text-muted-foreground">{data.label}</p>
                     </div>
                   );
                 }
                 return null;
               }}
-              cursor={{ stroke: 'hsl(var(--chart-cursor))', strokeWidth: 1, strokeDasharray: '4 4' }}
+              cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1, strokeDasharray: '4 4' }}
             />
             
             {/* Area fill - GREEN for positive, RED for negative */}
             <Area
               type="monotone"
               dataKey="value"
-              stroke={isPositive ? 'hsl(var(--chart-profit))' : 'hsl(var(--chart-loss))'}
+              stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
               strokeWidth={2}
               fill={isPositive ? 'url(#profitGradient)' : 'url(#lossGradient)'}
               animationDuration={500}
@@ -339,10 +339,8 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
         {/* Current Price Badge - GREEN or RED */}
         <div 
           className={cn(
-            "absolute right-0 px-2 py-0.5 rounded text-xs font-medium",
-            isPositive 
-              ? "bg-chart-profit text-white" 
-              : "bg-chart-loss text-white"
+            "absolute right-0 px-2 py-0.5 rounded-lg text-xs font-medium text-white",
+            isPositive ? "bg-profit" : "bg-loss"
           )}
           style={{ 
             top: '50%',

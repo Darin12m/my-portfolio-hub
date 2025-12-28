@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    /* Light theme - clean, soft, Apple-like */
-    --background: 210 20% 98%;
+    /* Light theme - Apple Wallet / iOS native feel */
+    --background: 0 0% 97%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -31,11 +31,11 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 92%;
-    --input: 214 20% 92%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 217 91% 55%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     /* Custom colors for fintech */
     --profit: 142 76% 36%;
@@ -51,22 +51,24 @@
     --chart-4: 280 65% 55%;
     --chart-5: 0 84% 55%;
     
+    /* Liquid allocation bar - soft blue */
     --allocation-bar: 217 80% 60%;
+    --allocation-fill: 217 80% 60%;
     
-    /* Trading Chart - Theme-aware (LIGHT) */
-    --chart-bg: 210 20% 96%;
-    --chart-surface: 210 20% 93%;
+    /* Trading Chart - Light theme */
+    --chart-bg: 210 20% 98%;
+    --chart-surface: 210 20% 95%;
     --chart-active: 217 91% 55%;
     --chart-active-foreground: 0 0% 100%;
     --chart-foreground: 222 47% 11%;
     --chart-muted: 215 16% 47%;
-    --chart-border: 214 20% 88%;
+    --chart-border: 214 20% 90%;
     --chart-baseline: 215 16% 60%;
     --chart-cursor: 215 16% 40%;
     --chart-popover: 0 0% 100%;
     --chart-profit: 142 76% 36%;
     --chart-loss: 0 84% 55%;
-    --chart-grid: 214 20% 92%;
+    --chart-grid: 214 20% 94%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
@@ -76,73 +78,6 @@
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 20% 92%;
     --sidebar-ring: 217 91% 55%;
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
-
-    --secondary: 222 47% 14%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 222 30% 18%;
-    --muted-foreground: 215 20% 55%;
-
-    --accent: 217 91% 60%;
-    --accent-foreground: 222 47% 6%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 217 91% 60%;
-    
-    --profit: 142 76% 45%;
-    --profit-foreground: 142 76% 90%;
-    --success: 142 76% 45%;
-    --success-foreground: 222 47% 6%;
-    --loss: 0 84% 60%;
-    --loss-foreground: 0 84% 90%;
-    
-    --chart-3: 45 93% 58%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 0 84% 60%;
-    
-    --allocation-bar: 217 50% 45%;
-    
-    /* Trading Chart - Theme-aware (DARK) */
-    --chart-bg: 222 47% 8%;
-    --chart-surface: 222 40% 12%;
-    --chart-active: 217 91% 60%;
-    --chart-active-foreground: 0 0% 100%;
-    --chart-foreground: 210 40% 98%;
-    --chart-muted: 215 20% 50%;
-    --chart-border: 222 30% 20%;
-    --chart-baseline: 215 20% 40%;
-    --chart-cursor: 215 20% 60%;
-    --chart-popover: 222 47% 11%;
-    --chart-profit: 142 76% 45%;
-    --chart-loss: 0 84% 60%;
-    --chart-grid: 222 30% 18%;
-
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 14%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 30% 18%;
-    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -158,6 +93,8 @@
     -webkit-overflow-scrolling: touch;
     /* Prevent text size adjustment on orientation change */
     -webkit-text-size-adjust: 100%;
+    /* Prevent horizontal scroll */
+    overflow-x: hidden;
   }
 
   body {
@@ -166,8 +103,8 @@
     /* Full viewport on iOS */
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    /* Smooth transitions for theme changes */
-    transition: background-color 0.3s ease, color 0.3s ease;
+    /* Prevent horizontal scroll on body */
+    overflow-x: hidden;
   }
 
   /* Prevent zoom on input focus on iOS */
@@ -210,22 +147,6 @@
     }
   }
 
-  .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50;
-  }
-
-  .table-row-hover {
-    @apply transition-colors;
-  }
-
-  .table-row-hover:hover {
-    background-color: hsl(var(--secondary) / 0.5);
-  }
-
-  .table-row-hover:active {
-    background-color: hsl(var(--secondary) / 0.7);
-  }
-
   /* iOS touch targets - minimum 44px */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
@@ -262,32 +183,35 @@
     @apply transition-transform active:scale-[0.99];
   }
 
-  /* Allocation bar - solid fill, visible but subtle */
-  .allocation-bar {
-    background-color: rgba(59, 130, 246, 0.18);
+  /* Liquid allocation bar - Design 1 */
+  .liquid-allocation {
+    background: linear-gradient(90deg, 
+      hsl(var(--allocation-fill) / 0.15) 0%, 
+      hsl(var(--allocation-fill) / 0.08) 60%,
+      transparent 100%
+    );
   }
   
-  .dark .allocation-bar {
-    background-color: rgba(59, 130, 246, 0.25);
+  /* Trading chart container */
+  .trading-chart-container {
+    @apply rounded-2xl p-4;
+    background-color: hsl(var(--card));
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
   }
 
-  /* Allocation bar subtle variant */
-  .allocation-bar-subtle {
-    background-color: rgba(59, 130, 246, 0.08);
+  /* Soft shadow utilities */
+  .shadow-soft {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
   }
-  
-  .dark .allocation-bar-subtle {
-    background-color: rgba(59, 130, 246, 0.12);
+
+  .shadow-soft-lg {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   }
-  
-  /* Trading chart container - theme-aware */
-  .trading-chart-container {
-    @apply rounded-lg p-3 border;
-    background-color: hsl(var(--chart-bg));
-    border-color: hsl(var(--chart-border) / 0.5);
-    background-image: 
-      radial-gradient(circle, hsl(var(--chart-grid)) 1px, transparent 1px);
-    background-size: 20px 20px;
+
+  /* Card without borders - uses shadows instead */
+  .card-soft {
+    @apply bg-card rounded-2xl;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
   }
 }
 
@@ -299,15 +223,4 @@
     z-index: 1;
     background: hsl(var(--card));
   }
-}
-
-/* Card shadows for light mode only */
-@media (prefers-color-scheme: light) {
-  .shadow-sm {
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.05);
-  }
-}
-
-.light .shadow-sm {
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.05);
 }
