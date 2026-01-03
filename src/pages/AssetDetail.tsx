@@ -8,6 +8,8 @@ import { calculateHoldings, formatCurrency, formatPercent, formatQuantity } from
 import { cn } from '@/lib/utils';
 import type { LivePrice, Trade } from '@/types/portfolio';
 import { getTrades } from '@/services/firestoreService';
+import { DecorativeBubbles } from '@/components/DecorativeBubbles';
+import { GradientCard } from '@/components/GradientCard';
 import { 
   fetchStockData, 
   fetchStockNews, 
@@ -163,15 +165,18 @@ export default function AssetDetail() {
   // Invalid symbol error
   if (!symbol) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
-        <div className="text-center space-y-2">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-          <h2 className="text-lg font-semibold">Invalid Stock Symbol</h2>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4 relative">
+        <DecorativeBubbles variant="subtle" />
+        <div className="text-center space-y-2 relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-loss/20 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-loss" />
+          </div>
+          <h2 className="text-lg font-bold font-display">Invalid Stock Symbol</h2>
           <p className="text-sm text-muted-foreground max-w-xs">
             "{rawSymbol}" is not a valid stock symbol. Please check and try again.
           </p>
         </div>
-        <Button onClick={() => navigate(-1)} variant="outline" className="rounded-xl">
+        <Button onClick={() => navigate(-1)} variant="outline" className="rounded-xl relative z-10">
           <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -179,29 +184,32 @@ export default function AssetDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Decorative bubbles */}
+      <DecorativeBubbles variant="minimal" className="fixed" />
+      
       {/* Header */}
-      <header className="bg-card shadow-soft sticky top-0 z-10 safe-area-top">
+      <header className="glass-strong sticky top-0 z-20 safe-area-top border-b border-border/30">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => navigate(-1)}
-              className="touch-target h-9 w-9"
+              className="touch-target h-9 w-9 rounded-xl hover:bg-primary/10"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-semibold leading-tight truncate max-w-[200px]">
+                <h1 className="text-base font-bold font-display leading-tight truncate max-w-[200px]">
                   {isLoading ? <Skeleton className="h-5 w-32" /> : companyName}
                 </h1>
                 <span className="text-xs text-muted-foreground">·</span>
-                <span className="text-xs font-medium text-muted-foreground">{symbol}</span>
+                <span className="text-xs font-semibold text-primary">{symbol}</span>
               </div>
               {marketState && !isLoading && (
-                <p className={cn("text-xs", marketState.color)}>{marketState.label}</p>
+                <p className={cn("text-xs font-medium", marketState.color)}>{marketState.label}</p>
               )}
             </div>
             <Button 
@@ -209,7 +217,7 @@ export default function AssetDetail() {
               size="icon" 
               onClick={handleRefresh}
               disabled={isLoading}
-              className="h-9 w-9"
+              className="h-9 w-9 rounded-xl hover:bg-primary/10"
             >
               <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             </Button>
@@ -217,13 +225,15 @@ export default function AssetDetail() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom">
+      <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom relative z-10">
         {/* Error State with Retry */}
         {error && !stockData && !isLoading && (
-          <div className="bg-destructive/10 rounded-2xl p-6 text-center space-y-3">
-            <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
+          <GradientCard className="p-6 text-center space-y-3" gradient="loss">
+            <div className="w-12 h-12 rounded-xl bg-loss/20 flex items-center justify-center mx-auto">
+              <AlertCircle className="h-6 w-6 text-loss" />
+            </div>
             <div>
-              <h3 className="font-semibold text-destructive">{error}</h3>
+              <h3 className="font-bold font-display text-loss">{error}</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 We couldn't fetch data for {symbol}. Please try again.
               </p>
@@ -231,32 +241,37 @@ export default function AssetDetail() {
             <Button onClick={handleRefresh} variant="outline" size="sm" className="rounded-xl">
               <RefreshCw className="h-4 w-4 mr-2" /> Retry
             </Button>
-          </div>
+          </GradientCard>
         )}
 
         {/* Price Header */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           {isLoading ? (
             <>
-              <Skeleton className="h-9 w-40" />
-              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-10 w-44" />
+              <Skeleton className="h-6 w-36" />
             </>
           ) : stockData ? (
             <>
-              <div className="flex items-baseline gap-2">
-                <h2 className="text-3xl font-bold">{formatCurrency(currentPrice)}</h2>
-                <span className="text-xs text-muted-foreground">USD</span>
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-4xl font-bold font-display">{formatCurrency(currentPrice)}</h2>
+                <span className="text-sm text-muted-foreground font-medium">USD</span>
               </div>
               <div className="flex items-center gap-2">
-                {isPositive ? (
-                  <TrendingUp className="h-4 w-4 text-profit" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-loss" />
-                )}
-                <span className={cn("text-sm font-semibold", isPositive ? "text-profit" : "text-loss")}>
-                  {isPositive ? '+' : ''}{formatCurrency(Math.abs(priceChange))} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
-                </span>
-                <span className="text-xs text-muted-foreground">Today</span>
+                <div className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-lg",
+                  isPositive ? "bg-profit/15" : "bg-loss/15"
+                )}>
+                  {isPositive ? (
+                    <TrendingUp className="h-4 w-4 text-profit" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-loss" />
+                  )}
+                  <span className={cn("text-sm font-bold", isPositive ? "text-profit" : "text-loss")}>
+                    {isPositive ? '+' : ''}{formatCurrency(Math.abs(priceChange))} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">Today</span>
               </div>
             </>
           ) : null}
@@ -264,7 +279,7 @@ export default function AssetDetail() {
 
         {/* Trading Chart - Only show if loading or has data */}
         {(isLoading || stockData) && (
-          <div className="card-soft p-4">
+          <GradientCard className="p-4" glowOnHover>
             {/* Time Range Tabs */}
             <div className="flex items-center gap-1 mb-4 overflow-x-auto scroll-smooth-x pb-1">
               {TIME_RANGES.map((range) => (
@@ -386,13 +401,13 @@ export default function AssetDetail() {
                 </div>
               )}
             </div>
-          </div>
+          </GradientCard>
         )}
 
         {/* Stats Grid - Only show if loading or has data */}
         {(isLoading || stockData) && (
-          <div className="card-soft p-4 space-y-3">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
+          <GradientCard className="p-4 space-y-3" glowOnHover>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
             {isLoading ? (
               <div className="grid grid-cols-2 gap-3">
                 {[...Array(8)].map((_, i) => (
@@ -441,13 +456,13 @@ export default function AssetDetail() {
             ) : (
               <p className="text-sm text-muted-foreground">No statistics available</p>
             )}
-          </div>
+          </GradientCard>
         )}
 
         {/* Your Position - Only show if user owns this stock */}
         {holding && (
-          <div className="bg-primary/5 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-medium text-primary uppercase tracking-wider">Your Position</h3>
+          <GradientCard className="p-4 space-y-3" gradient="primary" glowOnHover>
+            <h3 className="text-xs font-semibold text-primary uppercase tracking-wider">Your Position</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shares</span>
@@ -482,12 +497,12 @@ export default function AssetDetail() {
                 <span className="font-semibold">{holding.holdingPeriodDays} days</span>
               </div>
             </div>
-          </div>
+          </GradientCard>
         )}
 
         {/* News Section */}
-        <div className="card-soft p-4 space-y-3">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent News</h3>
+        <GradientCard className="p-4 space-y-3" glowOnHover>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
           {isNewsLoading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
@@ -520,7 +535,7 @@ export default function AssetDetail() {
           ) : (
             <p className="text-sm text-muted-foreground">No recent news for {symbol}</p>
           )}
-        </div>
+        </GradientCard>
       </main>
     </div>
   );

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Pencil, Check, Wallet, ChevronRight, LogOut, User } from 'lucide-react';
+import { ArrowLeft, Trash2, Pencil, Check, Wallet, ChevronRight, LogOut, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { DecorativeBubbles } from '@/components/DecorativeBubbles';
+import { GradientCard } from '@/components/GradientCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,37 +66,40 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Decorative bubbles */}
+      <DecorativeBubbles variant="subtle" className="fixed" />
+      
       {/* Header */}
-      <header className="bg-card shadow-soft sticky top-0 z-10 safe-area-top">
+      <header className="glass-strong sticky top-0 z-20 safe-area-top border-b border-border/30">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link to="/">
-              <Button variant="ghost" size="icon" className="touch-target">
+              <Button variant="ghost" size="icon" className="touch-target rounded-xl hover:bg-primary/10">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-semibold">Settings</h1>
+            <h1 className="text-xl font-bold font-display">Settings</h1>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 space-y-6 safe-area-bottom">
+      <main className="container mx-auto px-4 py-6 space-y-6 safe-area-bottom relative z-10">
         {/* Account Section */}
         <section className="space-y-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
             Account
           </h2>
           
-          <div className="card-soft p-4 space-y-4">
+          <GradientCard className="p-4 space-y-4">
             {/* User Info */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
+                <User className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground">Signed in as</p>
-                <p className="font-medium truncate">{user?.email || 'Unknown'}</p>
+                <p className="font-semibold truncate">{user?.email || 'Unknown'}</p>
               </div>
             </div>
 
@@ -102,7 +107,7 @@ export default function Settings() {
             <div className="pt-4 border-t border-border/30">
               <Button 
                 variant="outline" 
-                className="w-full gap-2 touch-target" 
+                className="w-full gap-2 touch-target rounded-xl border-border/50 hover:bg-primary/10" 
                 onClick={handleLogout}
                 disabled={loggingOut}
               >
@@ -110,40 +115,40 @@ export default function Settings() {
                 {loggingOut ? 'Signing out...' : 'Sign out'}
               </Button>
             </div>
-          </div>
+          </GradientCard>
         </section>
 
         {/* Crypto Accounts Section */}
         <section className="space-y-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
             Crypto Accounts
           </h2>
           
           <Link to="/settings/crypto">
-            <div className="card-soft p-4 flex items-center justify-between hover:shadow-soft-lg transition-shadow cursor-pointer touch-feedback">
+            <GradientCard className="p-4 flex items-center justify-between touch-feedback" glowOnHover>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-primary" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-accent flex items-center justify-center">
+                  <Wallet className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium">Exchange Connections</p>
+                  <p className="font-semibold">Exchange Connections</p>
                   <p className="text-sm text-muted-foreground">
                     Connect Binance, Gate.io and more
                   </p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
+            </GradientCard>
           </Link>
         </section>
 
         {/* Portfolio Section */}
         <section className="space-y-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
             Portfolio
           </h2>
           
-          <div className="card-soft p-4 space-y-4">
+          <GradientCard className="p-4 space-y-4">
             {/* Portfolio Name */}
             <div className="flex items-center justify-between gap-4">
               {isEditing ? (
@@ -151,7 +156,7 @@ export default function Settings() {
                   <Input
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className="flex-1"
+                    className="flex-1 rounded-xl bg-secondary/50 border-border/30"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveName();
@@ -161,7 +166,7 @@ export default function Settings() {
                       }
                     }}
                   />
-                  <Button size="icon" onClick={handleSaveName} className="touch-target">
+                  <Button size="icon" onClick={handleSaveName} className="touch-target rounded-xl bg-gradient-primary">
                     <Check className="h-4 w-4" />
                   </Button>
                 </div>
@@ -169,7 +174,7 @@ export default function Settings() {
                 <>
                   <div>
                     <p className="text-sm text-muted-foreground">Portfolio Name</p>
-                    <p className="font-medium">{portfolioName}</p>
+                    <p className="font-semibold">{portfolioName}</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -178,7 +183,7 @@ export default function Settings() {
                       setEditValue(portfolioName);
                       setIsEditing(true);
                     }}
-                    className="touch-target"
+                    className="touch-target rounded-xl hover:bg-primary/10"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -190,24 +195,24 @@ export default function Settings() {
             <div className="pt-4 border-t border-border/30">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full gap-2 touch-target">
+                  <Button variant="destructive" className="w-full gap-2 touch-target rounded-xl">
                     <Trash2 className="h-4 w-4" />
                     Delete Portfolio
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="safe-area-inset">
+                <AlertDialogContent className="glass-strong border-border/30 safe-area-inset">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Portfolio?</AlertDialogTitle>
+                    <AlertDialogTitle className="font-display">Delete Portfolio?</AlertDialogTitle>
                     <AlertDialogDescription>
                       This will permanently delete "{portfolioName}" and all {' '}
                       related trades. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="touch-target">Cancel</AlertDialogCancel>
+                    <AlertDialogCancel className="touch-target rounded-xl">Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDeletePortfolio}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 touch-target"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 touch-target rounded-xl"
                     >
                       Delete
                     </AlertDialogAction>
@@ -215,7 +220,18 @@ export default function Settings() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+          </GradientCard>
+        </section>
+
+        {/* App Info */}
+        <section className="pt-8 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-full flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-bold font-display text-gradient">Portfolio Tracker</span>
           </div>
+          <p className="text-xs text-muted-foreground">Version 1.0.0</p>
         </section>
       </main>
     </div>
