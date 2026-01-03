@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Holding } from '@/types/portfolio';
 import { formatCurrency, formatPercent, formatQuantity } from '@/lib/calculations';
 import { cn } from '@/lib/utils';
-import { ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, ChevronRight } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AssetLogo } from '@/components/AssetLogo';
@@ -111,7 +111,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (isLoading) {
     return (
-      <div className="card-soft">
+      <div className="glass rounded-2xl">
         <div className="p-8 text-center">
           <div className="animate-pulse-subtle text-muted-foreground">
             Loading holdings...
@@ -123,10 +123,13 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (holdings.length === 0) {
     return (
-      <div className="card-soft">
+      <div className="glass rounded-2xl">
         <div className="p-10 text-center">
-          <p className="text-muted-foreground">No holdings yet</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-primary mx-auto mb-4 flex items-center justify-center">
+            <span className="text-2xl">📊</span>
+          </div>
+          <p className="text-foreground font-medium">No holdings yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
             Import trades to get started
           </p>
         </div>
@@ -135,17 +138,17 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
   }
 
   return (
-    <div className="card-soft overflow-hidden">
+    <div className="glass rounded-2xl overflow-hidden">
       {/* Table Header with count/selection */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {isEditMode ? `${selectedTickers.size} selected` : `${holdings.length} Holdings`}
         </span>
         {isEditMode && (
           <Button 
             variant="destructive" 
             size="sm" 
-            className="gap-1 h-7 text-xs"
+            className="gap-1 h-7 text-xs rounded-lg"
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-3 w-3" />
@@ -158,12 +161,12 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
           {/* Table Header Row */}
-          <div className="grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] bg-muted/30">
+          <div className="grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] bg-secondary/30">
             {/* Security Header */}
             <div className="py-2.5 px-4">
               <button
                 onClick={() => handleSort('name')}
-                className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Security
@@ -175,7 +178,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('shares')}
-                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Shares
@@ -186,7 +189,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('cashflow')}
-                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Avg Cost
@@ -197,7 +200,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('value')}
-                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Value
@@ -208,7 +211,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('pl')}
-                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 P/L
@@ -219,7 +222,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('allocation')}
-                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Alloc
@@ -227,37 +230,37 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
           </div>
 
-          {/* Table Body - Mobile-friendly card layout with liquid allocation */}
-          <div className="divide-y divide-border/10">
+          {/* Table Body - Modern card layout with liquid allocation */}
+          <div className="divide-y divide-border/20">
             {sortedHoldings.map((holding, index) => (
               <div
                 key={holding.ticker}
                 onClick={() => handleRowClick(holding)}
                 className={cn(
-                  "relative grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] cursor-pointer",
-                  "transition-all duration-200",
-                  selectedTickers.has(holding.ticker) && "bg-primary/5",
-                  !isEditMode && "hover:bg-muted/20",
+                  "relative grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] cursor-pointer group",
+                  "transition-all duration-300",
+                  selectedTickers.has(holding.ticker) && "bg-primary/10",
+                  !isEditMode && "hover:bg-primary/5",
                   "animate-fade-in"
                 )}
-                style={{ animationDelay: `${index * 30}ms` }}
+                style={{ animationDelay: `${index * 40}ms` }}
               >
-                {/* LIQUID ALLOCATION BACKGROUND - Design 1 Core Feature */}
+                {/* LIQUID ALLOCATION BACKGROUND - Gradient version */}
                 <div 
-                  className="absolute inset-y-1 left-1 rounded-full liquid-allocation pointer-events-none"
+                  className="absolute inset-y-1 left-1 rounded-full liquid-allocation pointer-events-none transition-all duration-500"
                   style={{ 
                     width: holding.allocationPercent >= 0 
                       ? `${Math.max(Math.min(holding.allocationPercent, 100), 0)}%` 
                       : '0%',
-                    minWidth: holding.allocationPercent > 0 ? '8px' : '0',
-                    height: '65%',
-                    top: '17.5%',
+                    minWidth: holding.allocationPercent > 0 ? '12px' : '0',
+                    height: '70%',
+                    top: '15%',
                   }}
                   aria-hidden="true"
                 />
 
                 {/* Security Cell */}
-                <div className="py-3 px-4 relative z-10">
+                <div className="py-3.5 px-4 relative z-10">
                   <div className="flex items-center gap-3">
                     {/* Checkbox */}
                     <Checkbox
@@ -265,66 +268,82 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                       onCheckedChange={() => {}}
                       onClick={(e) => toggleSelection(holding.ticker, e)}
                       className={cn(
-                        "flex-shrink-0 transition-opacity",
+                        "flex-shrink-0 transition-all duration-200 border-muted-foreground/30",
                         isEditMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       )}
                     />
                     
-                    {/* Logo */}
-                    <AssetLogo
-                      ticker={holding.ticker}
-                      name={holding.name}
-                      size="sm"
-                    />
+                    {/* Logo with glow */}
+                    <div className="relative">
+                      <AssetLogo
+                        ticker={holding.ticker}
+                        name={holding.name}
+                        size="sm"
+                      />
+                      <div className="absolute inset-0 rounded-full bg-primary/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     
                     {/* Name & Ticker */}
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate leading-tight">
+                      <p className="font-semibold text-sm truncate leading-tight group-hover:text-primary transition-colors">
                         {holding.name}
                       </p>
-                      <p className="text-[10px] text-muted-foreground truncate">
+                      <p className="text-[10px] text-muted-foreground truncate font-medium">
                         {holding.ticker}
                       </p>
                     </div>
+
+                    {/* Arrow indicator on hover */}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
 
                 {/* Shares */}
-                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
-                  <p className="text-sm">{formatQuantity(holding.shares)}</p>
+                <div className="py-3.5 px-2 text-center flex items-center justify-center relative z-10">
+                  <p className="text-sm font-medium">{formatQuantity(holding.shares)}</p>
                 </div>
 
                 {/* Avg Cost */}
-                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
+                <div className="py-3.5 px-2 text-center flex items-center justify-center relative z-10">
                   <p className="text-sm text-muted-foreground">{formatCurrency(holding.averageBuyPrice)}</p>
                 </div>
 
                 {/* Current Value */}
-                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
-                  <p className="text-sm font-medium">{formatCurrency(holding.currentValue)}</p>
+                <div className="py-3.5 px-2 text-center flex items-center justify-center relative z-10">
+                  <p className="text-sm font-semibold">{formatCurrency(holding.currentValue)}</p>
                 </div>
 
                 {/* P/L */}
-                <div className="py-3 px-2 text-center flex flex-col items-center justify-center relative z-10">
+                <div className="py-3.5 px-2 text-center flex flex-col items-center justify-center relative z-10">
                   <p className={cn(
-                    "text-sm font-medium",
+                    "text-sm font-semibold",
                     holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
                   )}>
                     {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
                   </p>
                   <p className={cn(
-                    "text-[10px]",
-                    holding.unrealizedPLPercent >= 0 ? "text-profit" : "text-loss"
+                    "text-[10px] font-medium",
+                    holding.unrealizedPLPercent >= 0 ? "text-profit/80" : "text-loss/80"
                   )}>
                     {formatPercent(holding.unrealizedPLPercent)}
                   </p>
                 </div>
 
-                {/* Allocation - subtle, right-aligned */}
-                <div className="py-3 px-2 text-center flex items-center justify-center relative z-10">
-                  <p className="text-sm text-muted-foreground">
-                    {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
-                  </p>
+                {/* Allocation */}
+                <div className="py-3.5 px-2 text-center flex items-center justify-center relative z-10">
+                  <div className="flex items-center gap-1.5">
+                    <div 
+                      className="w-8 h-1.5 rounded-full bg-secondary overflow-hidden"
+                    >
+                      <div 
+                        className="h-full rounded-full bg-gradient-primary transition-all duration-500"
+                        style={{ width: `${Math.min(holding.allocationPercent, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -334,18 +353,18 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="glass-strong border-border/30">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Holdings?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display">Delete Holdings?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete {selectedTickers.size} holding{selectedTickers.size > 1 ? 's' : ''} and all related trades. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
             >
               Delete
             </AlertDialogAction>
