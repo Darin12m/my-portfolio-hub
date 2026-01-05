@@ -8,7 +8,6 @@ import { calculateHoldings, formatCurrency, formatPercent, formatQuantity } from
 import { cn } from '@/lib/utils';
 import type { LivePrice, Trade } from '@/types/portfolio';
 import { getTrades } from '@/services/firestoreService';
-import { DecorativeBubbles } from '@/components/DecorativeBubbles';
 import { GradientCard } from '@/components/GradientCard';
 import { 
   fetchStockData, 
@@ -165,18 +164,17 @@ export default function AssetDetail() {
   // Invalid symbol error
   if (!symbol) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4 relative">
-        <DecorativeBubbles variant="subtle" />
-        <div className="text-center space-y-2 relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-loss/20 flex items-center justify-center mx-auto mb-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 rounded-xl bg-loss/10 flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="h-8 w-8 text-loss" />
           </div>
-          <h2 className="text-lg font-bold font-display">Invalid Stock Symbol</h2>
+          <h2 className="text-lg font-semibold">Invalid Stock Symbol</h2>
           <p className="text-sm text-muted-foreground max-w-xs">
             "{rawSymbol}" is not a valid stock symbol. Please check and try again.
           </p>
         </div>
-        <Button onClick={() => navigate(-1)} variant="outline" className="rounded-xl relative z-10">
+        <Button onClick={() => navigate(-1)} variant="outline" className="rounded-lg">
           <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -184,29 +182,26 @@ export default function AssetDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Decorative bubbles */}
-      <DecorativeBubbles variant="minimal" className="fixed" />
-      
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="glass-strong sticky top-0 z-20 safe-area-top border-b border-border/30">
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm safe-area-top border-b border-border/40">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => navigate(-1)}
-              className="touch-target h-9 w-9 rounded-xl hover:bg-primary/10"
+              className="touch-target h-9 w-9 rounded-lg hover:bg-secondary"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold font-display leading-tight truncate max-w-[200px]">
+                <h1 className="text-base font-semibold leading-tight truncate max-w-[200px]">
                   {isLoading ? <Skeleton className="h-5 w-32" /> : companyName}
                 </h1>
                 <span className="text-xs text-muted-foreground">·</span>
-                <span className="text-xs font-semibold text-primary">{symbol}</span>
+                <span className="text-xs font-medium text-primary">{symbol}</span>
               </div>
               {marketState && !isLoading && (
                 <p className={cn("text-xs font-medium", marketState.color)}>{marketState.label}</p>
@@ -217,7 +212,7 @@ export default function AssetDetail() {
               size="icon" 
               onClick={handleRefresh}
               disabled={isLoading}
-              className="h-9 w-9 rounded-xl hover:bg-primary/10"
+              className="h-9 w-9 rounded-lg hover:bg-secondary"
             >
               <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             </Button>
@@ -225,20 +220,20 @@ export default function AssetDetail() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom relative z-10">
+      <main className="container mx-auto px-4 py-4 space-y-4 safe-area-bottom">
         {/* Error State with Retry */}
         {error && !stockData && !isLoading && (
           <GradientCard className="p-6 text-center space-y-3" gradient="loss">
-            <div className="w-12 h-12 rounded-xl bg-loss/20 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-loss/10 flex items-center justify-center mx-auto">
               <AlertCircle className="h-6 w-6 text-loss" />
             </div>
             <div>
-              <h3 className="font-bold font-display text-loss">{error}</h3>
+              <h3 className="font-semibold text-loss">{error}</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 We couldn't fetch data for {symbol}. Please try again.
               </p>
             </div>
-            <Button onClick={handleRefresh} variant="outline" size="sm" className="rounded-xl">
+            <Button onClick={handleRefresh} variant="outline" size="sm" className="rounded-lg">
               <RefreshCw className="h-4 w-4 mr-2" /> Retry
             </Button>
           </GradientCard>
@@ -254,20 +249,20 @@ export default function AssetDetail() {
           ) : stockData ? (
             <>
               <div className="flex items-baseline gap-3">
-                <h2 className="text-4xl font-bold font-display">{formatCurrency(currentPrice)}</h2>
+                <h2 className="text-4xl font-semibold">{formatCurrency(currentPrice)}</h2>
                 <span className="text-sm text-muted-foreground font-medium">USD</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1 rounded-lg",
-                  isPositive ? "bg-profit/15" : "bg-loss/15"
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+                  isPositive ? "badge-profit" : "badge-loss"
                 )}>
                   {isPositive ? (
-                    <TrendingUp className="h-4 w-4 text-profit" />
+                    <TrendingUp className="h-4 w-4" />
                   ) : (
-                    <TrendingDown className="h-4 w-4 text-loss" />
+                    <TrendingDown className="h-4 w-4" />
                   )}
-                  <span className={cn("text-sm font-bold", isPositive ? "text-profit" : "text-loss")}>
+                  <span className="text-sm font-medium">
                     {isPositive ? '+' : ''}{formatCurrency(Math.abs(priceChange))} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
                   </span>
                 </div>
@@ -277,7 +272,7 @@ export default function AssetDetail() {
           ) : null}
         </div>
 
-        {/* Trading Chart - Only show if loading or has data */}
+        {/* Trading Chart - ALWAYS BLUE */}
         {(isLoading || stockData) && (
           <GradientCard className="p-4" glowOnHover>
             {/* Time Range Tabs */}
@@ -288,10 +283,10 @@ export default function AssetDetail() {
                   onClick={() => setTimeRange(range)}
                   disabled={isLoading}
                   className={cn(
-                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all touch-target min-w-[40px]",
+                    "px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 touch-target min-w-[40px]",
                     timeRange === range
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                      ? "bg-primary/16 text-primary border border-primary/35"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
                     isLoading && "opacity-50"
                   )}
                 >
@@ -300,11 +295,11 @@ export default function AssetDetail() {
               ))}
             </div>
 
-            {/* Chart */}
+            {/* Chart - ALWAYS BLUE */}
             <div className="h-56 w-full relative">
               {isLoading ? (
                 <div className="h-full w-full flex items-center justify-center">
-                  <Skeleton className="h-full w-full rounded-xl" />
+                  <Skeleton className="h-full w-full rounded-lg" />
                 </div>
               ) : chartData.length > 0 ? (
                 <>
@@ -314,13 +309,11 @@ export default function AssetDetail() {
                       margin={{ top: 8, right: 50, left: 0, bottom: 0 }}
                     >
                       <defs>
-                        <linearGradient id="assetProfitGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--profit))" stopOpacity={0.2} />
-                          <stop offset="100%" stopColor="hsl(var(--profit))" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="assetLossGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--loss))" stopOpacity={0} />
-                          <stop offset="100%" stopColor="hsl(var(--loss))" stopOpacity={0.2} />
+                        {/* Blue gradient - chart is always blue */}
+                        <linearGradient id="assetBlueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6F82FF" stopOpacity={0.22} />
+                          <stop offset="50%" stopColor="#6F82FF" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#6F82FF" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       
@@ -343,14 +336,14 @@ export default function AssetDetail() {
                       
                       <ReferenceLine 
                         y={baseline} 
-                        stroke="hsl(var(--muted-foreground) / 0.3)"
+                        stroke="hsl(229 38% 26% / 0.4)"
                         strokeDasharray="4 4"
                         strokeWidth={1}
                       />
                       
                       <ReferenceLine 
                         y={currentPrice} 
-                        stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
+                        stroke="#6F82FF"
                         strokeDasharray="2 2"
                         strokeWidth={1.5}
                       />
@@ -360,8 +353,8 @@ export default function AssetDetail() {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload;
                             return (
-                              <div className="bg-card border border-border/50 rounded-xl px-3 py-2 shadow-soft-lg">
-                                <p className="text-sm font-semibold">
+                              <div className="bg-card border border-border/60 rounded-lg px-3 py-2 shadow-soft">
+                                <p className="text-sm font-medium">
                                   {formatCurrency(data.value)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">{data.label}</p>
@@ -373,23 +366,24 @@ export default function AssetDetail() {
                         cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1, strokeDasharray: '4 4' }}
                       />
                       
+                      {/* ALWAYS BLUE chart line with glow */}
                       <Area
                         type="monotone"
                         dataKey="value"
-                        stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
-                        strokeWidth={2}
-                        fill={isPositive ? 'url(#assetProfitGradient)' : 'url(#assetLossGradient)'}
+                        stroke="#6F82FF"
+                        strokeWidth={2.25}
+                        fill="url(#assetBlueGradient)"
                         animationDuration={400}
+                        style={{
+                          filter: 'drop-shadow(0 0 6px rgba(111,130,255,0.35)) drop-shadow(0 0 14px rgba(111,130,255,0.20))'
+                        }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                   
-                  {/* Current Price Badge */}
+                  {/* Current Price Badge - Blue */}
                   <div 
-                    className={cn(
-                      "absolute right-0 px-2 py-0.5 rounded-lg text-[10px] font-semibold text-white",
-                      isPositive ? "bg-profit" : "bg-loss"
-                    )}
+                    className="absolute right-0 px-2 py-0.5 rounded-lg text-[10px] font-medium text-white bg-primary glow-primary"
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
                   >
                     {formatCurrency(currentPrice)}
@@ -404,10 +398,10 @@ export default function AssetDetail() {
           </GradientCard>
         )}
 
-        {/* Stats Grid - Only show if loading or has data */}
+        {/* Stats Grid */}
         {(isLoading || stockData) && (
           <GradientCard className="p-4 space-y-3" glowOnHover>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Key Statistics</h3>
             {isLoading ? (
               <div className="grid grid-cols-2 gap-3">
                 {[...Array(8)].map((_, i) => (
@@ -426,11 +420,11 @@ export default function AssetDetail() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Day's Range</span>
-                  <span className={cn("font-medium text-xs", stats.dayRange === 'N/A' && "text-muted-foreground")}>{stats.dayRange === 'N/A' ? '—' : stats.dayRange}</span>
+                  <span className={cn("font-medium", stats.dayRange === 'N/A' && "text-muted-foreground")}>{stats.dayRange === 'N/A' ? '—' : stats.dayRange}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">52-Week Range</span>
-                  <span className={cn("font-medium text-xs", stats.yearRange === 'N/A' && "text-muted-foreground")}>{stats.yearRange === 'N/A' ? '—' : stats.yearRange}</span>
+                  <span className="text-muted-foreground">52W Range</span>
+                  <span className={cn("font-medium", stats.yearRange === 'N/A' && "text-muted-foreground")}>{stats.yearRange === 'N/A' ? '—' : stats.yearRange}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Market Cap</span>
@@ -441,99 +435,91 @@ export default function AssetDetail() {
                   <span className={cn("font-medium", stats.peRatio === 'N/A' && "text-muted-foreground")}>{stats.peRatio === 'N/A' ? '—' : stats.peRatio}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">EPS</span>
-                  <span className={cn("font-medium", stats.eps === 'N/A' && "text-muted-foreground")}>{stats.eps === 'N/A' ? '—' : stats.eps}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">Volume</span>
                   <span className={cn("font-medium", stats.volume === 'N/A' && "text-muted-foreground")}>{stats.volume === 'N/A' ? '—' : stats.volume}</span>
                 </div>
-                <div className="flex justify-between col-span-2">
-                  <span className="text-muted-foreground">Avg. Volume</span>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Avg Volume</span>
                   <span className={cn("font-medium", stats.avgVolume === 'N/A' && "text-muted-foreground")}>{stats.avgVolume === 'N/A' ? '—' : stats.avgVolume}</span>
                 </div>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No statistics available</p>
-            )}
+            ) : null}
           </GradientCard>
         )}
 
-        {/* Your Position - Only show if user owns this stock */}
+        {/* Your Position - Uses green/red for P/L */}
         {holding && (
-          <GradientCard className="p-4 space-y-3" gradient="primary" glowOnHover>
-            <h3 className="text-xs font-semibold text-primary uppercase tracking-wider">Your Position</h3>
+          <GradientCard className="p-4 space-y-3" glowOnHover gradient={holding.unrealizedPL >= 0 ? 'profit' : 'loss'}>
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your Position</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shares</span>
-                <span className="font-semibold">{formatQuantity(holding.shares)}</span>
+                <span className="font-medium">{formatQuantity(holding.shares)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Avg Cost</span>
-                <span className="font-semibold">{formatCurrency(holding.averageBuyPrice)}</span>
+                <span className="font-medium">{formatCurrency(holding.averageBuyPrice)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Market Value</span>
-                <span className="font-semibold">{formatCurrency(holding.currentValue)}</span>
+                <span className="font-medium">{formatCurrency(holding.currentValue)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Unrealized P/L</span>
-                <span className={cn("font-semibold", holding.unrealizedPL >= 0 ? "text-profit" : "text-loss")}>
+                <span className={cn(
+                  "font-medium",
+                  holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
+                )}>
                   {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)} ({formatPercent(holding.unrealizedPLPercent)})
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between col-span-2">
                 <span className="text-muted-foreground">Allocation</span>
-                <span className="font-semibold">
-                  {holding.allocationPercent <= 0 
-                    ? '—' 
-                    : holding.allocationPercent < 0.1 
-                      ? '<0.1%' 
-                      : `${holding.allocationPercent.toFixed(1)}%`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Holding Period</span>
-                <span className="font-semibold">{holding.holdingPeriodDays} days</span>
+                <span className="font-medium">{holding.allocationPercent.toFixed(2)}%</span>
               </div>
             </div>
           </GradientCard>
         )}
 
-        {/* News Section */}
+        {/* Recent News */}
         <GradientCard className="p-4 space-y-3" glowOnHover>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent News</h3>
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent News</h3>
           {isNewsLoading ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
+                <Skeleton key={i} className="h-16" />
               ))}
             </div>
           ) : news.length > 0 ? (
             <div className="space-y-3">
-              {news.map((item, index) => (
+              {news.slice(0, 5).map((item, index) => (
                 <a
                   key={index}
                   href={item.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block border-b border-border/30 pb-3 last:border-0 last:pb-0 hover:bg-muted/20 -mx-2 px-2 py-1 rounded-xl transition-colors"
+                  className="block p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors group"
                 >
-                  <p className="text-sm font-medium leading-tight line-clamp-2">{item.title}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">{item.publisher}</span>
-                    <span className="text-xs text-muted-foreground">•</span>
-                    <span className="text-xs text-muted-foreground">{formatTimeAgo(item.providerPublishTime)}</span>
-                    <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {item.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span>{item.publisher}</span>
+                        <span>·</span>
+                        <span>{formatTimeAgo(item.providerPublishTime)}</span>
+                      </div>
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </a>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No recent news for {symbol}</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No recent news available for {symbol}
+            </p>
           )}
         </GradientCard>
       </main>

@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -24,6 +24,7 @@ export default {
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          soft: "hsl(var(--primary-soft))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -48,6 +49,7 @@ export default {
         },
         card: {
           DEFAULT: "hsl(var(--card))",
+          secondary: "hsl(var(--card-secondary))",
           foreground: "hsl(var(--card-foreground))",
         },
         profit: {
@@ -61,6 +63,10 @@ export default {
         loss: {
           DEFAULT: "hsl(var(--loss))",
           foreground: "hsl(var(--loss-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -78,19 +84,10 @@ export default {
           "3": "hsl(var(--chart-3))",
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
+          line: "hsl(var(--chart-line))",
+          grid: "hsl(var(--chart-grid))",
           bg: "hsl(var(--chart-bg))",
           surface: "hsl(var(--chart-surface))",
-          active: "hsl(var(--chart-active))",
-          "active-foreground": "hsl(var(--chart-active-foreground))",
-          foreground: "hsl(var(--chart-foreground))",
-          muted: "hsl(var(--chart-muted))",
-          border: "hsl(var(--chart-border))",
-          baseline: "hsl(var(--chart-baseline))",
-          cursor: "hsl(var(--chart-cursor))",
-          popover: "hsl(var(--chart-popover))",
-          profit: "hsl(var(--chart-profit))",
-          loss: "hsl(var(--chart-loss))",
-          grid: "hsl(var(--chart-grid))",
         },
         allocation: {
           bar: "hsl(var(--allocation-bar))",
