@@ -111,7 +111,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (isLoading) {
     return (
-      <div className="glass rounded-2xl">
+      <div className="bg-card rounded-xl border border-border/60">
         <div className="p-8 text-center">
           <div className="animate-pulse-subtle text-muted-foreground">
             Loading holdings...
@@ -123,9 +123,9 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
   if (holdings.length === 0) {
     return (
-      <div className="glass rounded-2xl">
+      <div className="bg-card rounded-xl border border-border/60">
         <div className="p-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-primary mx-auto mb-4 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-xl bg-primary/10 mx-auto mb-4 flex items-center justify-center">
             <span className="text-2xl">📊</span>
           </div>
           <p className="text-foreground font-medium">No holdings yet</p>
@@ -138,10 +138,10 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
   }
 
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <div className="bg-card rounded-xl border border-border/60 overflow-hidden">
       {/* Table Header with count/selection */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {isEditMode ? `${selectedTickers.size} selected` : `${holdings.length} Holdings`}
         </span>
         {isEditMode && (
@@ -161,12 +161,12 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
           {/* Table Header Row */}
-          <div className="grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] bg-secondary/30">
+          <div className="grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] bg-secondary/50">
             {/* Security Header */}
             <div className="py-2.5 px-4">
               <button
                 onClick={() => handleSort('name')}
-                className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Security
@@ -178,7 +178,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('shares')}
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Shares
@@ -189,7 +189,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('cashflow')}
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Avg Cost
@@ -200,7 +200,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('value')}
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Value
@@ -211,7 +211,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('pl')}
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 P/L
@@ -222,7 +222,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             <div className="py-2.5 px-2 text-center">
               <button
                 onClick={() => handleSort('allocation')}
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                 disabled={isEditMode}
               >
                 Alloc
@@ -230,24 +230,22 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
             </div>
           </div>
 
-          {/* Table Body - Modern card layout with liquid allocation */}
-          <div className="divide-y divide-border/20">
-            {sortedHoldings.map((holding, index) => (
+          {/* Table Body */}
+          <div className="divide-y divide-border/30">
+            {sortedHoldings.map((holding) => (
               <div
                 key={holding.ticker}
                 onClick={() => handleRowClick(holding)}
                 className={cn(
                   "relative grid grid-cols-[minmax(180px,2fr)_repeat(5,1fr)] cursor-pointer group",
-                  "transition-all duration-300",
-                  selectedTickers.has(holding.ticker) && "bg-primary/10",
-                  !isEditMode && "hover:bg-primary/5",
-                  "animate-fade-in"
+                  "transition-all duration-200",
+                  selectedTickers.has(holding.ticker) && "bg-primary/8",
+                  !isEditMode && "hover:bg-secondary/50"
                 )}
-                style={{ animationDelay: `${index * 40}ms` }}
               >
-                {/* LIQUID ALLOCATION BACKGROUND - Gradient version */}
+                {/* LIQUID ALLOCATION BACKGROUND - Subtle blue */}
                 <div 
-                  className="absolute inset-y-1 left-1 rounded-full liquid-allocation pointer-events-none transition-all duration-500"
+                  className="absolute inset-y-1 left-1 rounded-lg liquid-allocation pointer-events-none transition-all duration-500"
                   style={{ 
                     width: holding.allocationPercent >= 0 
                       ? `${Math.max(Math.min(holding.allocationPercent, 100), 0)}%` 
@@ -268,27 +266,24 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                       onCheckedChange={() => {}}
                       onClick={(e) => toggleSelection(holding.ticker, e)}
                       className={cn(
-                        "flex-shrink-0 transition-all duration-200 border-muted-foreground/30",
+                        "flex-shrink-0 transition-all duration-200 border-border",
                         isEditMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       )}
                     />
                     
-                    {/* Logo with glow */}
-                    <div className="relative">
-                      <AssetLogo
-                        ticker={holding.ticker}
-                        name={holding.name}
-                        size="sm"
-                      />
-                      <div className="absolute inset-0 rounded-full bg-primary/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
+                    {/* Logo */}
+                    <AssetLogo
+                      ticker={holding.ticker}
+                      name={holding.name}
+                      size="sm"
+                    />
                     
                     {/* Name & Ticker */}
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm truncate leading-tight group-hover:text-primary transition-colors">
+                      <p className="font-medium text-sm truncate leading-tight group-hover:text-primary transition-colors">
                         {holding.name}
                       </p>
-                      <p className="text-[10px] text-muted-foreground truncate font-medium">
+                      <p className="text-[10px] text-muted-foreground truncate">
                         {holding.ticker}
                       </p>
                     </div>
@@ -300,7 +295,7 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
                 {/* Shares */}
                 <div className="py-3.5 px-2 text-center flex items-center justify-center relative z-10">
-                  <p className="text-sm font-medium">{formatQuantity(holding.shares)}</p>
+                  <p className="text-sm">{formatQuantity(holding.shares)}</p>
                 </div>
 
                 {/* Avg Cost */}
@@ -310,20 +305,20 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
                 {/* Current Value */}
                 <div className="py-3.5 px-2 text-center flex items-center justify-center relative z-10">
-                  <p className="text-sm font-semibold">{formatCurrency(holding.currentValue)}</p>
+                  <p className="text-sm font-medium">{formatCurrency(holding.currentValue)}</p>
                 </div>
 
-                {/* P/L */}
+                {/* P/L - Uses semantic green/red */}
                 <div className="py-3.5 px-2 text-center flex flex-col items-center justify-center relative z-10">
-                  <p className={cn(
-                    "text-sm font-semibold",
-                    holding.unrealizedPL >= 0 ? "text-profit" : "text-loss"
+                  <span className={cn(
+                    "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+                    holding.unrealizedPL >= 0 ? "badge-profit" : "badge-loss"
                   )}>
                     {holding.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(holding.unrealizedPL)}
-                  </p>
+                  </span>
                   <p className={cn(
-                    "text-[10px] font-medium",
-                    holding.unrealizedPLPercent >= 0 ? "text-profit/80" : "text-loss/80"
+                    "text-[10px] mt-0.5",
+                    holding.unrealizedPLPercent >= 0 ? "text-profit" : "text-loss"
                   )}>
                     {formatPercent(holding.unrealizedPLPercent)}
                   </p>
@@ -336,11 +331,11 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
                       className="w-8 h-1.5 rounded-full bg-secondary overflow-hidden"
                     >
                       <div 
-                        className="h-full rounded-full bg-gradient-primary transition-all duration-500"
+                        className="h-full rounded-full bg-primary transition-all duration-500"
                         style={{ width: `${Math.min(holding.allocationPercent, 100)}%` }}
                       />
                     </div>
-                    <p className="text-sm text-muted-foreground font-medium">
+                    <p className="text-sm text-muted-foreground">
                       {holding.allocationPercent >= 0 ? `${holding.allocationPercent.toFixed(1)}%` : '--'}
                     </p>
                   </div>
@@ -353,18 +348,18 @@ export function HoldingsTable({ holdings, isLoading, onDeleteHoldings }: Holding
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="glass-strong border-border/30">
+        <AlertDialogContent className="bg-card border-border/60">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display">Delete Holdings?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Holdings?</AlertDialogTitle>
             <AlertDialogDescription>
               This will delete {selectedTickers.size} holding{selectedTickers.size > 1 ? 's' : ''} and all related trades. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg"
             >
               Delete
             </AlertDialogAction>

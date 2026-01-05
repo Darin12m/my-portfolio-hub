@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { signIn, signUp, waitForAuth } from '@/lib/auth';
-import { DecorativeBubbles } from '@/components/DecorativeBubbles';
-import { Loader2, TrendingUp, Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
 const authSchema = z.object({
@@ -62,33 +61,29 @@ export default function Auth() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center relative">
-        <DecorativeBubbles variant="hero" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Decorative bubbles */}
-      <DecorativeBubbles variant="hero" />
-      
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-8 relative z-10">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-full flex items-center justify-center glow-primary">
-          <Sparkles className="h-7 w-7 text-white" />
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center glow-primary">
+          <span className="text-xl font-semibold text-primary-foreground">P</span>
         </div>
         <div>
-          <span className="text-2xl font-bold font-display">Portfolio</span>
-          <span className="text-2xl font-bold text-gradient"> Tracker</span>
+          <span className="text-2xl font-semibold">Portfolio</span>
+          <span className="text-2xl font-semibold text-primary"> Tracker</span>
         </div>
       </div>
 
       {/* Auth Card */}
-      <div className="w-full max-w-sm relative z-10">
-        <div className="glass-strong rounded-3xl p-8 border border-border/30">
-          <h1 className="text-xl font-bold font-display text-center mb-2">
+      <div className="w-full max-w-sm">
+        <div className="bg-card rounded-2xl p-8 border border-border/60">
+          <h1 className="text-xl font-semibold text-center mb-2">
             {isLogin ? 'Welcome back' : 'Create account'}
           </h1>
           <p className="text-sm text-muted-foreground text-center mb-6">
@@ -106,7 +101,7 @@ export default function Auth() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 autoComplete="email"
-                className="rounded-xl h-12 bg-secondary/50 border-border/30 focus:border-primary/50 focus:ring-primary/20"
+                className="rounded-lg h-12 bg-secondary border-border/40 focus:border-primary/50 focus:ring-primary/20"
               />
             </div>
 
@@ -120,19 +115,19 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
-                className="rounded-xl h-12 bg-secondary/50 border-border/30 focus:border-primary/50 focus:ring-primary/20"
+                className="rounded-lg h-12 bg-secondary border-border/40 focus:border-primary/50 focus:ring-primary/20"
               />
             </div>
 
             {error && (
-              <div className="text-sm text-loss bg-loss/10 rounded-xl p-3 border border-loss/20">
+              <div className="text-sm badge-loss rounded-lg p-3 border border-loss/20">
                 {error}
               </div>
             )}
 
             <Button 
               type="submit" 
-              className="w-full touch-target rounded-xl h-12 bg-gradient-primary hover:opacity-90 transition-opacity font-semibold" 
+              className="w-full touch-target rounded-lg h-12 bg-primary hover:bg-primary/90 transition-colors font-medium" 
               disabled={loading}
             >
               {loading ? (
@@ -157,9 +152,9 @@ export default function Auth() {
               disabled={loading}
             >
               {isLogin ? (
-                <>Don't have an account? <span className="text-primary font-semibold">Sign up</span></>
+                <>Don't have an account? <span className="text-primary font-medium">Sign up</span></>
               ) : (
-                <>Already have an account? <span className="text-primary font-semibold">Sign in</span></>
+                <>Already have an account? <span className="text-primary font-medium">Sign in</span></>
               )}
             </button>
           </div>
@@ -167,7 +162,7 @@ export default function Auth() {
       </div>
 
       {/* Bottom decorative element */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
     </div>
   );
 }

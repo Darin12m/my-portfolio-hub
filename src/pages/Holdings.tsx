@@ -4,16 +4,14 @@ import { HoldingsTable } from '@/components/HoldingsTable';
 import { PortfolioSummary } from '@/components/PortfolioSummary';
 import { TradingChart } from '@/components/TradingChart';
 import { ImportSheet } from '@/components/ImportSheet';
-import { DecorativeBubbles } from '@/components/DecorativeBubbles';
 import { Button } from '@/components/ui/button';
-import { Settings, Sparkles } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { Trade, LivePrice } from '@/types/portfolio';
 import { mockPrices } from '@/data/mockData';
 import { calculateHoldings, calculateGlobalPortfolioTotal } from '@/lib/calculations';
 import { startPriceRefresh } from '@/services/priceService';
 import { useToast } from '@/hooks/use-toast';
 import { getTrades, addTrades, deleteTradesByTicker, getExistingTransactionIds } from '@/services/firestoreService';
-
 import { parseCSV, filterDuplicates } from '@/services/importService';
 
 const REFRESH_INTERVAL = 30000;
@@ -189,24 +187,21 @@ export default function Holdings() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Decorative background bubbles */}
-      <DecorativeBubbles variant="hero" className="fixed" />
-      
-      <header className="glass-strong sticky top-0 z-20 safe-area-top border-b border-border/30">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm safe-area-top border-b border-border/40">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-full flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary-foreground">P</span>
               </div>
-              <h1 className="text-lg font-bold font-display">Portfolio</h1>
+              <h1 className="text-lg font-semibold">Portfolio</h1>
             </div>
             
             <div className="flex items-center gap-1">
               <ImportSheet onImport={handleImport} />
               <Link to="/settings">
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-secondary">
                   <Settings className="h-5 w-5" />
                 </Button>
               </Link>
@@ -215,7 +210,7 @@ export default function Holdings() {
         </div>
       </header>
 
-      <main className="safe-area-bottom relative z-10">
+      <main className="safe-area-bottom">
         <div className="container mx-auto px-4 py-5 space-y-5">
           <TradingChart 
             holdings={holdings} 
@@ -226,8 +221,8 @@ export default function Holdings() {
           {lastUpdate && (
             <div className="flex items-center justify-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-profit opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-profit"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 live-dot"></span>
               </span>
               <span className="text-xs text-muted-foreground font-medium">
                 Live · {lastUpdate.toLocaleTimeString()}

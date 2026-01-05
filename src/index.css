@@ -2,89 +2,134 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
+  /* Premium Dark Finance - Dark Mode (Default) */
   :root {
-    /* Modern Fintech - Vibrant Dark Theme */
-    --background: 240 15% 6%;
-    --foreground: 0 0% 98%;
+    /* Backgrounds - OLED optimized layered depth */
+    --background: 222 47% 6%;
+    --foreground: 225 25% 93%;
 
-    --card: 240 15% 9%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 40% 11%;
+    --card-secondary: 222 38% 14%;
+    --card-foreground: 225 25% 93%;
 
-    --popover: 240 15% 9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 40% 11%;
+    --popover-foreground: 225 25% 93%;
 
-    /* Vibrant purple-blue primary */
-    --primary: 250 89% 67%;
+    /* Primary accent - Elegant blue */
+    --primary: 232 100% 72%;
+    --primary-soft: 232 100% 80%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 15% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 222 38% 14%;
+    --secondary-foreground: 225 25% 93%;
 
-    --muted: 240 15% 15%;
-    --muted-foreground: 240 5% 55%;
+    --muted: 222 38% 14%;
+    --muted-foreground: 227 17% 51%;
 
-    --accent: 280 80% 60%;
+    --accent: 232 100% 72%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 15% 18%;
-    --input: 240 15% 15%;
-    --ring: 250 89% 67%;
+    /* Borders/dividers */
+    --border: 229 38% 20%;
+    --input: 222 38% 14%;
+    --ring: 232 100% 72%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    /* Fintech colors - Vibrant green for profit, hot pink for loss */
-    --profit: 160 84% 50%;
-    --profit-foreground: 160 84% 95%;
-    --success: 160 84% 50%;
+    /* Semantic colors - Outcomes only */
+    --profit: 142 71% 45%;
+    --profit-foreground: 142 71% 95%;
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-    --loss: 340 82% 60%;
-    --loss-foreground: 340 82% 95%;
-    
-    /* Chart colors - Gradient palette */
-    --chart-1: 250 89% 67%;
-    --chart-2: 160 84% 50%;
-    --chart-3: 45 93% 58%;
-    --chart-4: 280 80% 60%;
-    --chart-5: 340 82% 60%;
-    
-    /* Allocation bar - Gradient accent */
-    --allocation-bar: 250 89% 67%;
-    --allocation-fill: 250 89% 67%;
-    
-    /* Trading Chart */
-    --chart-bg: 240 15% 7%;
-    --chart-surface: 240 15% 12%;
-    --chart-active: 250 89% 67%;
-    --chart-active-foreground: 0 0% 100%;
-    --chart-foreground: 0 0% 95%;
-    --chart-muted: 240 5% 45%;
-    --chart-border: 240 15% 20%;
-    --chart-baseline: 240 5% 35%;
-    --chart-cursor: 240 5% 60%;
-    --chart-popover: 240 15% 12%;
-    --chart-profit: 160 84% 50%;
-    --chart-loss: 340 82% 60%;
-    --chart-grid: 240 15% 15%;
+    --loss: 0 84% 60%;
+    --loss-foreground: 0 84% 95%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
 
-    --sidebar-background: 240 15% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 250 89% 67%;
+    /* Chart colors - Blue only, never green/red */
+    --chart-1: 232 100% 72%;
+    --chart-2: 232 100% 80%;
+    --chart-3: 232 80% 65%;
+    --chart-4: 232 60% 55%;
+    --chart-5: 232 50% 45%;
+
+    /* Chart specifics */
+    --chart-line: 232 100% 72%;
+    --chart-grid: 229 38% 26%;
+    --chart-bg: 222 47% 6%;
+    --chart-surface: 222 40% 11%;
+
+    /* Allocation bar */
+    --allocation-bar: 232 100% 72%;
+    --allocation-fill: 232 100% 72%;
+
+    /* Sidebar */
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 225 25% 93%;
+    --sidebar-primary: 232 100% 72%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 15% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 240 15% 18%;
-    --sidebar-ring: 250 89% 67%;
+    --sidebar-accent: 222 38% 14%;
+    --sidebar-accent-foreground: 225 25% 93%;
+    --sidebar-border: 229 38% 20%;
+    --sidebar-ring: 232 100% 72%;
+  }
 
-    /* Gradient accents */
-    --gradient-start: 250 89% 67%;
-    --gradient-mid: 280 80% 60%;
-    --gradient-end: 320 80% 55%;
+  /* Premium Light Finance - Light Mode */
+  .light {
+    /* Backgrounds */
+    --background: 225 33% 98%;
+    --foreground: 222 47% 9%;
+
+    --card: 0 0% 100%;
+    --card-secondary: 225 27% 95%;
+    --card-foreground: 222 47% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 9%;
+
+    /* Primary accent stays blue */
+    --primary: 232 100% 66%;
+    --primary-soft: 232 100% 72%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 225 27% 95%;
+    --secondary-foreground: 222 47% 9%;
+
+    --muted: 225 27% 95%;
+    --muted-foreground: 224 16% 45%;
+
+    --accent: 232 100% 66%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders/dividers */
+    --border: 224 32% 90%;
+    --input: 225 27% 95%;
+    --ring: 232 100% 66%;
+
+    /* Semantic colors remain same logic */
+    --profit: 142 71% 40%;
+    --profit-foreground: 142 71% 95%;
+    --loss: 0 84% 55%;
+    --loss-foreground: 0 84% 95%;
+
+    /* Chart colors */
+    --chart-line: 232 100% 66%;
+    --chart-grid: 224 32% 85%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 9%;
+    --sidebar-primary: 232 100% 66%;
+    --sidebar-border: 224 32% 90%;
   }
 }
 
@@ -102,10 +147,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
     min-height: -webkit-fill-available;
     overflow-x: hidden;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out;
   }
 
   /* Prevent zoom on input focus on iOS */
@@ -116,9 +162,11 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 600;
   }
 
+  /* Semantic P/L colors */
   .text-profit {
     color: hsl(var(--profit));
   }
@@ -135,129 +183,19 @@
     background-color: hsl(var(--loss));
   }
 
+  /* P/L Badge styles - Subtle pills */
+  .badge-profit {
+    background-color: hsl(var(--profit) / 0.12);
+    color: hsl(var(--profit));
+  }
+
+  .badge-loss {
+    background-color: hsl(var(--loss) / 0.12);
+    color: hsl(var(--loss));
+  }
+
   .bg-allocation-bar {
     background-color: hsl(var(--allocation-bar));
-  }
-
-  /* Gradient text */
-  .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-mid)), hsl(var(--gradient-end)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Gradient backgrounds */
-  .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-mid)));
-  }
-
-  .bg-gradient-accent {
-    background: linear-gradient(135deg, hsl(var(--gradient-mid)), hsl(var(--gradient-end)));
-  }
-
-  .bg-gradient-full {
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-mid)), hsl(var(--gradient-end)));
-  }
-
-  /* Glassmorphism cards */
-  .glass {
-    background: hsl(var(--card) / 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--border) / 0.5);
-  }
-
-  .glass-strong {
-    background: hsl(var(--card) / 0.8);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border: 1px solid hsl(var(--border) / 0.3);
-  }
-
-  /* Glow effects */
-  .glow-primary {
-    box-shadow: 0 0 30px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.15);
-  }
-
-  .glow-profit {
-    box-shadow: 0 0 20px hsl(var(--profit) / 0.3), 0 0 40px hsl(var(--profit) / 0.15);
-  }
-
-  .glow-loss {
-    box-shadow: 0 0 20px hsl(var(--loss) / 0.3), 0 0 40px hsl(var(--loss) / 0.15);
-  }
-
-  /* Animated gradient border */
-  .gradient-border {
-    position: relative;
-    background: hsl(var(--card));
-    border-radius: var(--radius);
-  }
-
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: calc(var(--radius) + 1px);
-    background: linear-gradient(135deg, hsl(var(--gradient-start)), hsl(var(--gradient-mid)), hsl(var(--gradient-end)));
-    z-index: -1;
-    opacity: 0.5;
-  }
-
-  .animate-pulse-subtle {
-    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  @keyframes pulse-subtle {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-
-  /* Floating animation for bubbles */
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0) scale(1);
-    }
-    50% {
-      transform: translateY(-20px) scale(1.05);
-    }
-  }
-
-  @keyframes float-slow {
-    0%, 100% {
-      transform: translateY(0) rotate(0deg);
-    }
-    50% {
-      transform: translateY(-30px) rotate(5deg);
-    }
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  .animate-float-slow {
-    animation: float-slow 8s ease-in-out infinite;
-  }
-
-  .animate-shimmer {
-    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
-    background-size: 200% 100%;
-    animation: shimmer 3s infinite;
   }
 
   /* iOS touch targets - minimum 44px */
@@ -293,45 +231,73 @@
 
   /* Active states for touch feedback */
   .touch-feedback {
-    @apply transition-all active:scale-[0.98] active:opacity-80;
+    @apply transition-all duration-200 active:scale-[0.98] active:opacity-80;
   }
 
-  /* Liquid allocation bar - Gradient version */
+  /* Liquid allocation bar - Subtle blue */
   .liquid-allocation {
     background: linear-gradient(90deg, 
-      hsl(var(--allocation-fill) / 0.35) 0%, 
-      hsl(var(--gradient-mid) / 0.2) 50%,
+      hsl(var(--allocation-fill) / 0.15) 0%, 
+      hsl(var(--allocation-fill) / 0.08) 50%,
       transparent 100%
     );
   }
-  
-  /* Trading chart container */
-  .trading-chart-container {
-    @apply rounded-2xl p-4 glass;
+
+  /* Premium card styles */
+  .card-premium {
+    @apply rounded-xl bg-card border border-border/60;
+    transition: all 0.2s ease-out;
   }
 
-  /* Modern card with gradient glow */
-  .card-modern {
-    @apply rounded-2xl glass;
-    transition: all 0.3s ease;
-  }
-
-  .card-modern:hover {
-    box-shadow: 0 0 40px hsl(var(--primary) / 0.15);
+  .card-premium:hover {
+    box-shadow: 0 0 24px hsl(var(--primary) / 0.08);
+    border-color: hsl(var(--primary) / 0.2);
   }
 
   /* Soft shadow utilities */
   .shadow-soft {
-    box-shadow: 0 4px 20px hsl(var(--background) / 0.5);
+    box-shadow: 0 4px 24px hsl(var(--background) / 0.4);
   }
 
   .shadow-soft-lg {
-    box-shadow: 0 8px 40px hsl(var(--background) / 0.6);
+    box-shadow: 0 8px 40px hsl(var(--background) / 0.5);
   }
 
-  /* Card without borders - uses glassmorphism */
-  .card-soft {
-    @apply rounded-2xl glass;
+  /* Primary glow - Blue only */
+  .glow-primary {
+    box-shadow: 0 0 6px hsl(var(--primary) / 0.35), 
+                0 0 14px hsl(var(--primary) / 0.20);
+  }
+
+  .glow-primary-strong {
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+  }
+
+  /* Selected state - Blue accent */
+  .state-selected {
+    background-color: hsl(var(--primary) / 0.16);
+    color: hsl(var(--primary-soft));
+    border: 1px solid hsl(var(--primary) / 0.35);
+  }
+
+  /* Live indicator */
+  .live-dot {
+    background-color: hsl(var(--primary));
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+  }
+
+  /* Animation utilities */
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 }
 
