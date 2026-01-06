@@ -16,8 +16,8 @@
     --popover: 240 15% 9%;
     --popover-foreground: 0 0% 98%;
 
-    /* Vibrant purple-blue primary */
-    --primary: 250 89% 67%;
+    /* Neon Blue primary */
+    --primary: 195 100% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 15% 15%;
@@ -26,7 +26,7 @@
     --muted: 240 15% 15%;
     --muted-foreground: 240 5% 55%;
 
-    --accent: 280 80% 60%;
+    --accent: 210 100% 60%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -34,7 +34,7 @@
 
     --border: 240 15% 18%;
     --input: 240 15% 15%;
-    --ring: 250 89% 67%;
+    --ring: 195 100% 50%;
 
     --radius: 1rem;
 
@@ -47,20 +47,20 @@
     --loss-foreground: 340 82% 95%;
     
     /* Chart colors - Gradient palette */
-    --chart-1: 250 89% 67%;
+    --chart-1: 195 100% 50%;
     --chart-2: 160 84% 50%;
     --chart-3: 45 93% 58%;
-    --chart-4: 280 80% 60%;
+    --chart-4: 210 100% 60%;
     --chart-5: 340 82% 60%;
     
     /* Allocation bar - Gradient accent */
-    --allocation-bar: 250 89% 67%;
-    --allocation-fill: 250 89% 67%;
+    --allocation-bar: 195 100% 50%;
+    --allocation-fill: 195 100% 50%;
     
     /* Trading Chart */
     --chart-bg: 240 15% 7%;
     --chart-surface: 240 15% 12%;
-    --chart-active: 250 89% 67%;
+    --chart-active: 195 100% 50%;
     --chart-active-foreground: 0 0% 100%;
     --chart-foreground: 0 0% 95%;
     --chart-muted: 240 5% 45%;
@@ -74,17 +74,17 @@
 
     --sidebar-background: 240 15% 8%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 250 89% 67%;
+    --sidebar-primary: 195 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 15% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 240 15% 18%;
-    --sidebar-ring: 250 89% 67%;
+    --sidebar-ring: 195 100% 50%;
 
-    /* Gradient accents */
-    --gradient-start: 250 89% 67%;
-    --gradient-mid: 280 80% 60%;
-    --gradient-end: 320 80% 55%;
+    /* Gradient accents - Neon Blue palette */
+    --gradient-start: 195 100% 50%;
+    --gradient-mid: 210 100% 60%;
+    --gradient-end: 180 100% 45%;
   }
 }
 
