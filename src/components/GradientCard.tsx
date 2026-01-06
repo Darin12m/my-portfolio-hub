@@ -15,25 +15,25 @@ export function GradientCard({
   gradient = 'none'
 }: GradientCardProps) {
   const glowClass = {
-    primary: 'hover:shadow-[0_0_24px_hsl(var(--primary)/0.12)]',
-    accent: 'hover:shadow-[0_0_24px_hsl(var(--primary)/0.12)]',
-    profit: 'hover:shadow-[0_0_20px_hsl(var(--profit)/0.15)]',
-    loss: 'hover:shadow-[0_0_20px_hsl(var(--loss)/0.15)]',
-    none: 'hover:shadow-[0_0_20px_hsl(var(--primary)/0.08)]',
+    primary: 'hover:shadow-[0_0_40px_hsl(var(--primary)/0.2)]',
+    accent: 'hover:shadow-[0_0_40px_hsl(var(--accent)/0.2)]',
+    profit: 'hover:shadow-[0_0_30px_hsl(var(--profit)/0.25)]',
+    loss: 'hover:shadow-[0_0_30px_hsl(var(--loss)/0.25)]',
+    none: 'hover:shadow-[0_0_30px_hsl(var(--primary)/0.1)]',
   };
 
   const borderClass = {
-    primary: 'border-primary/20 hover:border-primary/30',
-    accent: 'border-primary/20 hover:border-primary/30',
-    profit: 'border-profit/20 hover:border-profit/30',
-    loss: 'border-loss/20 hover:border-loss/30',
-    none: 'border-border/60 hover:border-border/80',
+    primary: 'border-primary/20',
+    accent: 'border-accent/20',
+    profit: 'border-profit/20',
+    loss: 'border-loss/20',
+    none: 'border-border/30',
   };
 
   return (
     <div 
       className={cn(
-        "rounded-xl bg-card p-4 border transition-all duration-200",
+        "rounded-2xl glass p-4 transition-all duration-300",
         borderClass[gradient],
         glowOnHover && glowClass[gradient],
         className

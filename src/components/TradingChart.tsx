@@ -150,7 +150,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
   
   const currentPrice = totalValue;
   
-  // Determine if performance is positive for P/L badge only
+  // Determine if performance is positive (GREEN) or negative (RED)
   const isPositive = totalPL >= 0;
   
   const minValue = chartData.length > 0 
@@ -171,7 +171,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
     return (
       <GradientCard className="p-6">
         <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-          <div className="w-16 h-16 rounded-xl bg-primary/10 mb-4 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-primary mb-4 flex items-center justify-center">
             <span className="text-2xl">📈</span>
           </div>
           <p className="font-medium">Import trades to see portfolio chart</p>
@@ -182,18 +182,18 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
 
   return (
     <GradientCard className="p-4" glowOnHover>
-      {/* Chart Controls */}
+      {/* Chart Controls - Simplified */}
       <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
         {/* Time Range Tabs */}
-        <div className="flex items-center gap-0.5 bg-secondary rounded-lg p-0.5 overflow-x-auto scroll-smooth-x">
+        <div className="flex items-center gap-0.5 bg-secondary/50 rounded-xl p-0.5 overflow-x-auto scroll-smooth-x">
           {TIME_RANGES.map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
               className={cn(
-                "px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200 min-w-[36px]",
+                "px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all min-w-[36px]",
                 timeRange === range
-                  ? "bg-primary/16 text-primary border border-primary/35"
+                  ? "bg-gradient-primary text-white shadow-soft"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -202,13 +202,13 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
           ))}
         </div>
         
-        {/* Right Controls */}
+        {/* Right Controls - Simplified */}
         <div className="flex items-center gap-1">
           {/* Refresh Button */}
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
+            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/10"
             onClick={handleRefresh}
             disabled={isLoading}
           >
@@ -218,11 +218,11 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
           {/* Baseline Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary">
+              <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/10">
                 Baseline <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border/60">
+            <DropdownMenuContent align="end" className="glass-strong border-border/30">
               <DropdownMenuItem onClick={() => setBaselineType('Previous Close')}>
                 Previous Close
               </DropdownMenuItem>
@@ -234,15 +234,17 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
         </div>
       </div>
       
-      {/* Price Header - P/L badge uses green/red */}
+      {/* Price Header - Uses GREEN for profit, RED for loss */}
       <div className="mb-4">
         <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="text-2xl font-semibold">
+          <span className="text-2xl font-bold font-display">
             {formatCurrency(currentPrice)}
           </span>
           <div className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium",
-            isPositive ? "badge-profit" : "badge-loss"
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold",
+            isPositive 
+              ? "bg-profit/15 text-profit" 
+              : "bg-loss/15 text-loss"
           )}>
             <span>{isPositive ? '+' : ''}{formatCurrency(totalPL)}</span>
             <span className="opacity-75">({isPositive ? '+' : ''}{totalPLPercent.toFixed(2)}%)</span>
@@ -253,7 +255,7 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
         </p>
       </div>
       
-      {/* Main Chart - ALWAYS BLUE, never green/red */}
+      {/* Main Chart - Line and fill color based on performance */}
       <div className="h-52 sm:h-64 w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart 
@@ -261,11 +263,15 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
             margin={{ top: 8, right: 55, left: 0, bottom: 0 }}
           >
             <defs>
-              {/* Blue gradient - chart is always blue */}
-              <linearGradient id="chartBlueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#6F82FF" stopOpacity={0.22} />
-                <stop offset="50%" stopColor="#6F82FF" stopOpacity={0.10} />
-                <stop offset="100%" stopColor="#6F82FF" stopOpacity={0} />
+              {/* Green gradient for positive performance */}
+              <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--profit))" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="hsl(var(--profit))" stopOpacity={0} />
+              </linearGradient>
+              {/* Red gradient for negative performance */}
+              <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--loss))" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="hsl(var(--loss))" stopOpacity={0} />
               </linearGradient>
             </defs>
             
@@ -287,18 +293,18 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
               width={50}
             />
             
-            {/* Baseline Reference Line - Dashed, subtle */}
+            {/* Baseline Reference Line */}
             <ReferenceLine 
               y={baseline} 
-              stroke="hsl(229 38% 26% / 0.4)"
+              stroke="hsl(var(--muted-foreground) / 0.3)"
               strokeDasharray="4 4"
               strokeWidth={1}
             />
             
-            {/* Current Price Reference Line - Blue */}
+            {/* Current Price Reference Line */}
             <ReferenceLine 
               y={currentPrice} 
-              stroke="#6F82FF"
+              stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
               strokeDasharray="2 2"
               strokeWidth={1.5}
             />
@@ -308,8 +314,8 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
                 if (active && payload && payload.length) {
                   const data = payload[0].payload;
                   return (
-                    <div className="bg-card border border-border/60 rounded-lg px-3 py-2 shadow-soft">
-                      <p className="text-sm font-semibold">
+                    <div className="glass-strong border border-border/30 rounded-xl px-3 py-2">
+                      <p className="text-sm font-bold font-display">
                         {formatCurrency(data.value)}
                       </p>
                       <p className="text-xs text-muted-foreground">{data.label}</p>
@@ -321,25 +327,25 @@ export function TradingChart({ holdings, onRefresh, isLoading }: TradingChartPro
               cursor={{ stroke: 'hsl(var(--primary) / 0.3)', strokeWidth: 1, strokeDasharray: '4 4' }}
             />
             
-            {/* Area - ALWAYS BLUE with glow */}
+            {/* Area fill - GREEN for positive, RED for negative */}
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#6F82FF"
-              strokeWidth={2.25}
-              fill="url(#chartBlueGradient)"
+              stroke={isPositive ? 'hsl(var(--profit))' : 'hsl(var(--loss))'}
+              strokeWidth={2.5}
+              fill={isPositive ? 'url(#profitGradient)' : 'url(#lossGradient)'}
               animationDuration={500}
               animationEasing="ease-out"
-              style={{
-                filter: 'drop-shadow(0 0 6px rgba(111,130,255,0.35)) drop-shadow(0 0 14px rgba(111,130,255,0.20))'
-              }}
             />
           </AreaChart>
         </ResponsiveContainer>
         
-        {/* Current Price Badge - Blue with glow */}
+        {/* Current Price Badge - GREEN or RED with glow */}
         <div 
-          className="absolute right-0 px-2.5 py-1 rounded-lg text-xs font-semibold text-white bg-primary glow-primary"
+          className={cn(
+            "absolute right-0 px-2.5 py-1 rounded-lg text-xs font-bold text-white",
+            isPositive ? "bg-profit glow-profit" : "bg-loss glow-loss"
+          )}
           style={{ 
             top: '50%',
             transform: 'translateY(-50%)'
